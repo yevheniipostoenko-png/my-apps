@@ -216,6 +216,46 @@ html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Space G
 @keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 .fu{animation:fu .22s ease forwards}
 svg{display:block;overflow:visible}
+
+/* ══ DESKTOP LAYOUT ══ */
+@media(min-width:768px){
+  html,body{overflow:auto}
+  #app{
+    max-width:100%!important;
+    height:100dvh;
+    display:grid!important;
+    grid-template-rows:auto 1fr;
+    grid-template-columns:200px 1fr;
+    grid-template-areas:"hdr hdr""nav main";
+  }
+  .hdr{grid-area:hdr;padding:14px 28px}
+  .bnav{
+    grid-area:nav;
+    display:flex!important;
+    flex-direction:column;
+    border-top:none;
+    border-right:1px solid var(--brd2);
+    padding:16px 0;
+    gap:2px;
+    background:var(--bg2);
+  }
+  .nb{
+    flex-direction:row;
+    justify-content:flex-start;
+    padding:12px 18px;
+    gap:12px;
+    font-size:11px;
+    border-radius:10px;
+    margin:0 8px;
+  }
+  .nb .ni{font-size:20px}
+  .nb.on{background:var(--up-dim);color:var(--up)}
+  .page{grid-area:main;padding:20px 28px;overflow-y:auto;height:100%}
+  .ov{align-items:center}
+  .modal{border-radius:20px;max-width:520px;border:1px solid var(--brd2)}
+  .toast{bottom:30px}
+  .hdr-val{font-size:20px}
+}
 </style>
 </head>
 <body>
