@@ -1,0 +1,1516 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f0f4f8">
+<title>Genya Trending</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, set, onValue, off }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ══════════════════════════════════════════════════
+  // 🔥 ВСТАВТЕ СВІЙ FIREBASE CONFIG НИЖЧЕ
+  // Отримати на: https://console.firebase.google.com
+  // Проект → Налаштування → Веб-додаток → firebaseConfig
+  // ══════════════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDteADlex9-zcLsmSsCtMz_FwjKLPBBKUQ",
+    authDomain:        "myapp-91fed.firebaseapp.com",
+    databaseURL:       "https://myapp-91fed-default-rtdb.firebaseio.com",
+    projectId:         "myapp-91fed",
+    storageBucket:     "myapp-91fed.firebasestorage.app",
+    messagingSenderId: "351705572415",
+    appId:             "1:351705572415:web:6a860f0035286248a3448a"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getDatabase(app);
+  let _dbRef = null;
+  let _uid   = null;
+
+  // ── Зберегти до Firebase ──
+  window._fbSave = function(data) {
+    if (!_dbRef) return;
+    set(_dbRef, data).catch(e => console.error('FB save:', e));
+  };
+
+  // ── Слухати зміни ──
+  function subscribeData(uid) {
+    if (_dbRef) off(_dbRef);
+    _dbRef = ref(db, 'users/' + uid + '/trading');
+    onValue(_dbRef, snap => {
+      const val = snap.val();
+      if (val) {
+        try {
+          window._fbLoaded(val);
+        } catch(e) { console.error('FB load:', e); }
+      } else {
+        window._fbLoaded(null); // нові дані — використати DEF
+      }
+    });
+  }
+
+  // ── Auth state ──
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      _uid = user.uid;
+      document.getElementById('fb-login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('fb-user-name').textContent = user.displayName || user.email;
+      subscribeData(user.uid);
+    } else {
+      _uid = null;
+      _dbRef = null;
+      document.getElementById('fb-login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  });
+
+  // ── Кнопка входу ──
+  window._fbSignIn = async function() {
+    const btn = document.getElementById('fb-signin-btn');
+    btn.textContent = 'Вхід...'; btn.disabled = true;
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch(e) {
+      btn.textContent = '🔑 Увійти через Google';
+      btn.disabled = false;
+      alert('Помилка входу: ' + e.message);
+    }
+  };
+
+  // ── Кнопка виходу ──
+  window._fbSignOut = async function() {
+    if (!confirm('Вийти з акаунту?')) return;
+    await signOut(auth);
+  };
+</script>
+<style>
+:root{
+  --bg:#f0f4f8;--bg2:#ffffff;--bg3:#f7f9fc;--bg4:#e8edf3;
+  --brd:#d0dae8;--brd2:#c5d2e4;
+  --txt:#0a1628;--txt2:#1a2e4a;--txt3:#8098b8;
+  --up:#00a870;--up2:#007a52;--up-dim:#00a87014;
+  --dn:#e0253c;--dn2:#b81c30;--dn-dim:#e0253c12;
+  --gold:#b8860b;--blue:#1d6fd8;--purple:#7c3aed;--cyan:#0891b2;
+  --r:12px;--r2:18px;
+  --glow:0 2px 12px rgba(0,0,0,.06);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Space Grotesk',sans-serif;overflow:hidden;font-size:15px}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:var(--bg);position:relative}
+
+/* ── HEADER ── */
+.hdr{flex-shrink:0;padding:12px 15px 10px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--brd2);background:var(--bg2);position:relative;overflow:hidden}
+.hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--up),var(--blue),transparent)}
+.brand{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;letter-spacing:3px;background:linear-gradient(135deg,var(--up),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sub{font-size:9px;color:var(--txt3);letter-spacing:2px;margin-top:1px;font-family:'JetBrains Mono',monospace}
+.hdr-dep{text-align:right;cursor:pointer}
+.hdr-val{font-family:'JetBrains Mono',monospace;font-size:16px;font-weight:700}
+.hdr-lbl{font-size:8px;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;margin-top:1px}
+.hdr-chg{font-size:10px;font-weight:700;margin-top:1px;font-family:'JetBrains Mono',monospace}
+
+.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 13px 6px}
+.page::-webkit-scrollbar{width:0}
+
+/* ── NAV ── */
+.bnav{flex-shrink:0;display:grid;grid-template-columns:repeat(4,1fr);background:var(--bg2);border-top:1px solid var(--brd2);padding-bottom:env(safe-area-inset-bottom,0)}
+.nb{background:none;border:none;display:flex;flex-direction:column;align-items:center;padding:8px 0 7px;gap:3px;font-size:9px;font-weight:700;letter-spacing:.5px;cursor:pointer;color:var(--txt3);font-family:'Space Grotesk',sans-serif;transition:color .15s;text-transform:uppercase}
+.nb .ni{font-size:20px;line-height:1}
+.nb.on{color:var(--up)}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--brd2);border-radius:var(--r2);margin-bottom:10px;overflow:hidden;position:relative;box-shadow:var(--glow)}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(0,168,112,.2),transparent)}
+.cb{padding:13px 15px}
+.ct{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:10px;font-family:'JetBrains Mono',monospace}
+
+.sr{display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--brd)}
+.sr:last-child{border-bottom:none}
+.sl{font-size:11px;color:var(--txt2)}
+.sv{font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* ── CHIPS ── */
+.chips{display:flex;gap:7px;margin-bottom:10px}
+.chip{flex:1;background:var(--bg2);border:1px solid var(--brd2);border-radius:13px;padding:9px 6px;text-align:center}
+.chip-v{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;line-height:1.2}
+.chip-l{font-size:9px;color:var(--txt3);letter-spacing:1px;text-transform:uppercase;margin-top:3px}
+
+/* ── PROGRESS ── */
+.pt{background:var(--bg4);border-radius:4px;overflow:hidden;height:6px}
+.pf{height:100%;border-radius:4px;transition:width .5s ease}
+.pf-up{background:linear-gradient(90deg,var(--up2),var(--up))}
+.pf-dn{background:linear-gradient(90deg,var(--dn2),var(--dn))}
+.pf-gold{background:linear-gradient(90deg,#c9a000,var(--gold))}
+.pf-blue{background:linear-gradient(90deg,#1a5acc,var(--blue))}
+
+/* ── SESSION TYPE BADGE ── */
+.stype{display:inline-flex;align-items:center;gap:4px;border-radius:6px;font-size:9px;font-weight:700;padding:2px 7px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px}
+.stype-self{background:rgba(0,229,160,.12);color:var(--up);border:1px solid rgba(0,229,160,.25)}
+.stype-trader{background:rgba(61,143,255,.12);color:var(--blue);border:1px solid rgba(61,143,255,.25)}
+
+/* ── DAY ITEM ── */
+.di{background:var(--bg2);border:1px solid var(--brd2);border-radius:var(--r);padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:opacity .12s;border-left:3px solid transparent}
+.di:active{opacity:.75}
+.di.pos{border-left-color:var(--up)}
+.di.neg{border-left-color:var(--dn)}
+.di.zero{border-left-color:var(--txt3)}
+.di.today{border-color:rgba(0,229,160,.2);background:rgba(0,229,160,.04)}
+.di.future{opacity:.45}
+.di-num{width:28px;height:28px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--txt3);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.di-num.today-n{background:var(--up-dim);color:var(--up);border:1px solid rgba(0,229,160,.3)}
+.di-body{flex:1;min-width:0}
+.di-date{font-size:11px;font-weight:700;color:var(--txt);font-family:'JetBrains Mono',monospace}
+.di-sub{font-size:10px;color:var(--txt3);margin-top:2px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.di-right{text-align:right;flex-shrink:0}
+.di-pnl{font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700}
+.di-pct{font-size:9px;margin-top:2px}
+.di-need{font-size:9px;color:var(--gold);margin-top:2px}
+
+/* ── GOAL BANNER ── */
+.goal-banner{background:linear-gradient(135deg,rgba(0,168,112,.1),rgba(29,111,216,.07));border:1px solid rgba(0,168,112,.25);border-radius:var(--r2);padding:14px 15px;margin-bottom:10px;position:relative;overflow:hidden}
+.goal-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--up),transparent)}
+.goal-reached{background:linear-gradient(135deg,rgba(0,168,112,.15),rgba(0,122,82,.1));border-color:var(--up);animation:pulse-glow 2s infinite}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(0,168,112,.2)}50%{box-shadow:0 0 20px 4px rgba(0,168,112,.12)}}
+
+/* ── STOP BANNER ── */
+.stop-banner{background:linear-gradient(135deg,rgba(224,37,60,.1),rgba(184,28,48,.07));border:1px solid rgba(224,37,60,.25);border-radius:var(--r2);padding:12px 15px;margin-bottom:10px}
+
+/* ── OVERLAYS ── */
+.ov{position:fixed;inset:0;background:rgba(10,22,40,.55);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(10px)}
+.ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border-radius:22px 22px 0 0;width:100%;max-width:430px;border:1px solid var(--brd2);border-bottom:none;transform:translateY(28px);transition:transform .22s ease;max-height:92dvh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px)}
+.ov.open .modal{transform:translateY(0)}
+.mhandle{width:34px;height:3px;background:var(--brd2);border-radius:2px;margin:12px auto 0}
+.mhdr{padding:14px 17px 11px;border-bottom:1px solid var(--brd2)}
+.mt{font-size:16px;font-weight:700;letter-spacing:.3px;color:var(--txt)}
+.ms{font-size:11px;color:var(--txt3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.mbody{padding:13px 17px}
+.ml{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:6px;display:block;font-family:'JetBrains Mono',monospace}
+.ml:not(:first-child){margin-top:14px}
+.min{width:100%;background:var(--bg3);border:1px solid var(--brd2);border-radius:11px;padding:12px 14px;color:var(--txt);font-size:15px;font-weight:600;font-family:'Space Grotesk',sans-serif;outline:none;transition:border-color .2s}
+.min:focus{border-color:var(--up)}
+.mbtns{display:flex;gap:7px;padding:8px 17px 10px;position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--brd2)}
+.mbtn{flex:1;padding:13px;border:none;border-radius:13px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .12s}
+.mbtn:active{opacity:.8}
+.mbtn-ok{background:linear-gradient(135deg,var(--up),var(--up2));color:#fff}
+.mbtn-no{background:var(--bg4);color:var(--txt2)}
+.del-btn{width:calc(100% - 34px);margin:0 17px 8px;padding:11px;background:transparent;color:var(--dn);border:1px solid rgba(224,37,60,.22);border-radius:12px;font-size:12px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer}
+
+/* ── SESSION TYPE SELECTOR ── */
+.type-row{display:flex;gap:8px;margin-bottom:6px}
+.type-btn{flex:1;padding:10px;border:1px solid var(--brd2);border-radius:10px;background:var(--bg3);color:var(--txt3);font-size:12px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:all .15s;text-align:center}
+.type-btn.sel-self{background:var(--up-dim);border-color:var(--up);color:var(--up2)}
+.type-btn.sel-trader{background:rgba(29,111,216,.1);border-color:var(--blue);color:var(--blue)}
+
+/* ── ANALYTICS CHART ── */
+.chart-wrap{margin:4px 0 0}
+svg{display:block;overflow:visible}
+
+/* ── SESSION LIST IN DAY MODAL ── */
+.sess-item{background:var(--bg3);border:1px solid var(--brd);border-radius:10px;padding:10px 12px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.sess-left{display:flex;align-items:center;gap:8px}
+.sess-idx{width:22px;height:22px;border-radius:6px;background:var(--bg4);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:var(--txt3);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.sess-right{text-align:right}
+.sess-pnl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.sess-del{background:none;border:none;color:var(--dn);font-size:16px;cursor:pointer;padding:4px;line-height:1}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(10px);padding:9px 20px;border-radius:18px;font-size:12px;font-weight:700;z-index:300;opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap;font-family:'JetBrains Mono',monospace}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--up);color:#fff}
+.toast.err{background:var(--dn);color:#fff}
+.toast.inf{background:var(--txt2);color:#fff}
+.toast.warn{background:var(--gold);color:#fff}
+
+.empty{text-align:center;padding:50px 20px;color:var(--txt3)}
+.empty-ico{font-size:46px;margin-bottom:12px;opacity:.5}
+.empty-txt{font-size:13px;line-height:1.7;font-weight:600}
+
+.btn-row{display:flex;gap:8px;margin-bottom:10px}
+.btn-sm{flex:1;padding:11px 8px;background:var(--bg2);border:1px solid var(--brd2);border-radius:12px;font-size:11px;font-weight:700;color:var(--txt2);cursor:pointer;font-family:'Space Grotesk',sans-serif;text-align:center;transition:all .15s}
+.btn-sm:active{opacity:.75}
+.btn-danger{color:var(--dn);border-color:rgba(255,61,92,.25)}
+.btn-export{color:var(--blue);border-color:rgba(61,143,255,.25)}
+.btn-import{color:var(--gold);border-color:rgba(245,197,66,.25)}
+
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .22s ease forwards}
+
+/* sessions toggle in day */
+.day-sessions-wrap{margin-top:8px}
+.add-sess-btn{width:100%;padding:10px;background:var(--up-dim);border:1px solid rgba(0,229,160,.25);border-radius:10px;color:var(--up);font-size:12px;font-weight:700;cursor:pointer;font-family:'Space Grotesk',sans-serif;transition:opacity .12s}
+.add-sess-btn:active{opacity:.75}
+.preview-box{background:var(--bg3);border-radius:10px;padding:10px 12px;margin:8px 0;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;border:1px solid var(--brd)}
+</style>
+</head>
+<body>
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="fb-login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:var(--bg);padding:30px;text-align:center">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--up),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">Genya Trading</div>
+  <div style="font-size:11px;color:var(--txt3);letter-spacing:2px;font-family:'JetBrains Mono',monospace;margin-bottom:40px">TRADING JOURNAL</div>
+  <div style="background:var(--bg2);border:1px solid var(--brd2);border-radius:20px;padding:28px 24px;width:100%;max-width:340px;box-shadow:var(--glow)">
+    <div style="font-size:32px;margin-bottom:12px">📊</div>
+    <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:8px">Синхронізація між пристроями</div>
+    <div style="font-size:12px;color:var(--txt3);margin-bottom:24px;line-height:1.7">Ваші дані автоматично синхронізуються на ПК та телефоні через Google акаунт</div>
+    <button id="fb-signin-btn" onclick="_fbSignIn()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--up),var(--up2));color:#fff;border:none;border-radius:13px;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#fff" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#fff" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#fff" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
+      🔑 Увійти через Google
+    </button>
+  </div>
+  <div style="margin-top:20px;font-size:10px;color:var(--txt3);line-height:1.7">Дані зберігаються у вашому особистому Firebase.<br>Ніхто крім вас не має доступу.</div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="hdr">
+    <div>
+      <div class="brand">Genya Trading</div>
+      <div class="brand-sub">TRADING JOURNAL · USD</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="hdr-dep" onclick="openSettings()">
+        <div class="hdr-val" id="hdr-val">—</div>
+        <div class="hdr-lbl" id="hdr-lbl">Депозит</div>
+        <div class="hdr-chg" id="hdr-chg"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="fb-user-name" style="font-size:9px;color:var(--txt3);font-family:'JetBrains Mono',monospace;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button onclick="_fbSignOut()" style="background:none;border:none;font-size:9px;color:var(--txt3);cursor:pointer;padding:2px 5px;border-radius:5px;border:1px solid var(--brd2)">Вийти</button>
+      </div>
+    </div>
+  </div>
+  <div class="page" id="page"></div>
+  <div class="bnav" id="bnav"></div>
+</div>
+
+<!-- ══ DAY MODAL ══ -->
+<div class="ov" id="ov-day" onclick="ovClick(event,'ov-day')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr">
+    <div class="mt" id="dm-title">День</div>
+    <div class="ms" id="dm-sub"></div>
+  </div>
+  <div class="mbody">
+    <div id="dm-sessions-list"></div>
+    <div id="dm-add-form" style="display:none">
+      <span class="ml">Тип торгівлі</span>
+      <div class="type-row">
+        <button class="type-btn sel-self" id="type-self" onclick="selType('self')">👤 Сам</button>
+        <button class="type-btn" id="type-trader" onclick="selType('trader')">🤝 З трейдером</button>
+      </div>
+      <span class="ml">Кінцевий депозит ($)</span>
+      <input class="min" id="dm-bal" type="number" inputmode="decimal" placeholder="напр: 1050.00" oninput="dmPreview()">
+      <div id="dm-preview" class="preview-box" style="display:none"></div>
+      <span class="ml">Нотатка (необов'язково)</span>
+      <input class="min" id="dm-note" type="text" placeholder="Що торгував...">
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="mbtn mbtn-no" style="flex:1" onclick="cancelAddSession()">Відміна</button>
+        <button class="mbtn mbtn-ok" style="flex:2" onclick="saveSession()">💾 Додати сесію</button>
+      </div>
+    </div>
+    <div id="dm-add-btn-wrap">
+      <button class="add-sess-btn" onclick="showAddSession()">+ Додати сесію</button>
+    </div>
+  </div>
+  <div style="padding:0 17px 8px" id="dm-del-wrap" style="display:none">
+    <button class="del-btn" onclick="clearDay()">🗑 Очистити весь день</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ SETTINGS MODAL ══ -->
+<div class="ov" id="ov-sett" onclick="ovClick(event,'ov-sett')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt">⚙️ Налаштування</div><div class="ms">Всі суми в $ USD</div></div>
+  <div class="mbody">
+    <span class="ml">Дата початку трейдингу</span>
+    <input class="min" id="s-startdate" type="date">
+    <span class="ml">Початковий депозит ($)</span>
+    <input class="min" id="s-dep" type="number" inputmode="decimal" placeholder="1000">
+    <span class="ml">Кількість днів торгівлі</span>
+    <input class="min" id="s-days" type="number" inputmode="numeric" placeholder="30">
+    <span class="ml">Мінімальна ставка ($)</span>
+    <input class="min" id="s-stake" type="number" inputmode="decimal" placeholder="10">
+    <span class="ml">Мінімальний % прибутку (payout %)</span>
+    <input class="min" id="s-payout" type="number" inputmode="decimal" placeholder="92">
+    <span class="ml">Мін. угод на день</span>
+    <input class="min" id="s-mindeals" type="number" inputmode="numeric" placeholder="3">
+    <span class="ml">Макс. угод на день (ліміт)</span>
+    <input class="min" id="s-maxdeals" type="number" inputmode="numeric" placeholder="20">
+    <span class="ml">Макс. можна втратити на день (%)</span>
+    <input class="min" id="s-stoploss" type="number" inputmode="decimal" placeholder="10">
+    <span class="ml">Ціль — загальний депозит ($)</span>
+    <input class="min" id="s-goal" type="number" inputmode="decimal" placeholder="5000">
+    <span class="ml">Ціль — заробляти на день (% від депозиту)</span>
+    <input class="min" id="s-daily-pct" type="number" inputmode="decimal" placeholder="2">
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-sett')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="saveSettings()">✅ Зберегти</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ RESET CONFIRM ══ -->
+<div class="ov" id="ov-reset" onclick="ovClick(event,'ov-reset')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt" style="color:var(--dn)">⚠️ Скинути все?</div><div class="ms">Видалить всі дані та записи</div></div>
+  <div class="mbody">
+    <div style="background:var(--dn-dim);border:1px solid rgba(255,61,92,.2);border-radius:12px;padding:13px;font-size:13px;color:var(--txt2);line-height:1.8">
+      ✗ Всі записані сесії та дні<br>✗ Вся аналітика<br>✗ Налаштування журналу
+    </div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-reset')">Скасувати</button>
+    <button class="mbtn" style="background:var(--dn);color:#fff" onclick="doReset()">Скинути</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ IMPORT MODAL ══ -->
+<div class="ov" id="ov-import" onclick="ovClick(event,'ov-import')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt">📤 Імпорт CSV</div><div class="ms">Скопіюйте текст CSV та вставте нижче</div></div>
+  <div class="mbody">
+    <div style="background:var(--bg3);border:1px solid var(--brd2);border-radius:12px;padding:12px 14px;margin-bottom:12px;font-size:11px;color:var(--txt2);line-height:1.9">
+      <div style="font-weight:700;color:var(--txt);margin-bottom:6px">📋 Як імпортувати:</div>
+      1. Відкрийте <strong style="color:var(--txt)">trade_journal_....csv</strong> через <strong style="color:var(--txt)">Total Commander</strong> або будь-який текстовий редактор<br>
+      2. Довге натискання → <strong style="color:var(--txt)">Виділити все</strong><br>
+      3. <strong style="color:var(--txt)">Копіювати</strong><br>
+      4. Вставте <strong style="color:var(--txt)">сирий текст</strong> нижче (не таблицю)<br>
+      <div style="margin-top:8px;padding:8px;background:var(--bg4);border-radius:8px;font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--txt3);line-height:1.7">
+        Очікуваний формат рядка:<br>
+        <span style="color:var(--up)">"2026-05-21","1","Сам","37.96","40","2.04",""</span>
+      </div>
+    </div>
+    <span class="ml">Вставте CSV текст</span>
+    <textarea id="csv-paste" class="min" style="font-size:11px;font-family:'JetBrains Mono',monospace;height:130px;resize:none;line-height:1.5;padding:12px" placeholder="Вставте сюди вміст CSV файлу..."></textarea>
+    <div id="csv-preview" style="display:none;margin-top:8px;background:var(--up-dim);border:1px solid rgba(0,229,160,.2);border-radius:10px;padding:10px 12px;font-size:11px;color:var(--up);font-family:'JetBrains Mono',monospace"></div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-import')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="doImportFromModal()">✅ Імпортувати</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ WITHDRAWAL MODAL ══ -->
+<div class="ov" id="ov-withdraw" onclick="ovClick(event,'ov-withdraw')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt">💸 Вивід коштів</div><div class="ms">Облік виведених грошей з депозиту</div></div>
+  <div class="mbody">
+    <div id="wd-list" style="margin-bottom:12px"></div>
+    <span class="ml">Сума виводу ($)</span>
+    <input class="min" id="wd-amount" type="number" inputmode="decimal" placeholder="напр: 200.00" oninput="wdPreview()">
+    <span class="ml">Дата виводу</span>
+    <input class="min" id="wd-date" type="date">
+    <span class="ml">Нотатка (необов'язково)</span>
+    <input class="min" id="wd-note" type="text" placeholder="напр: на картку Monobank">
+    <div id="wd-preview" style="display:none;margin-top:10px;background:var(--bg3);border:1px solid var(--brd2);border-radius:10px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.7;color:var(--txt2)"></div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-withdraw')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="saveWithdrawal()">💸 Вивести</button>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const SK = 'tradepulse_v1';
+const DN = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+const DEF = {
+  tab: 0,
+  cfg: {
+    startDate: '',
+    dep: 1000,
+    totalDays: 30,
+    stake: 10,
+    payout: 92,
+    minDeals: 3,
+    maxDeals: 20,
+    stopLoss: 10,
+    goal: 5000,
+    dailyPct: 2
+  },
+  days: [],
+  withdrawals: []
+};
+
+let S = clone(DEF);
+
+// Storage: тільки localStorage (стабільно при відкритті файлу локально)
+function load() {
+  // Завантаження відбувається через Firebase onValue → window._fbLoaded
+  // Локальний fallback поки Firebase не відповів
+  let raw = null;
+  try { raw = localStorage.getItem(SK); } catch {}
+  try { S = raw ? JSON.parse(raw) : clone(DEF); } catch { S = clone(DEF); }
+  if (!S.cfg) S.cfg = clone(DEF.cfg);
+  if (!S.days) S.days = [];
+  if (!S.withdrawals) S.withdrawals = [];
+  if (S.tab == null) S.tab = 0;
+  sanitizeCfg();
+}
+function sanitizeCfg() {
+  const c = S.cfg;
+  if (c.minDeals == null) c.minDeals = 3;
+  if (c.maxDeals == null) c.maxDeals = 20;
+  if (c.stopLoss == null) c.stopLoss = 10;
+  if (c.dailyPct == null) c.dailyPct = 2;
+  if (c.stake == null) c.stake = 10;
+  if (c.payout == null) c.payout = 92;
+}
+function save() {
+  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) { console.error('Save failed:', e); }
+  // Синхронізація з Firebase
+  if (window._fbSave) window._fbSave(S);
+}
+
+// Firebase callback — отримали дані з хмари
+window._fbLoaded = function(data) {
+  if (data) {
+    try {
+      S = data;
+      if (!S.cfg) S.cfg = clone(DEF.cfg);
+      if (!S.days) S.days = [];
+      if (!S.withdrawals) S.withdrawals = [];
+      if (S.tab == null) S.tab = 0;
+      sanitizeCfg();
+      // Зберегти локально як кеш
+      try { localStorage.setItem(SK, JSON.stringify(S)); } catch {}
+    } catch(e) { S = clone(DEF); }
+  } else {
+    S = clone(DEF);
+  }
+  buildNav(); render();
+};
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// ── UTILS ──
+const f = (v, d=2) => { if (v==null||isNaN(v)) return '—'; return (+v).toFixed(d); };
+const fa = (v, d=2) => f(Math.abs(v), d);
+const sg = v => v>0 ? '+' : v<0 ? '-' : '';
+const todayStr = () => { const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; };
+function fmtDate(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')} ${DN[d.getDay()]}`;
+}
+function addDays(str, n) {
+  const d = new Date(str+'T00:00:00'); d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// ── DEPOSIT CALC ──
+function startDep() { return S.cfg.dep || 1000; }
+function totalWithdrawn() {
+  return (S.withdrawals || []).reduce((s, w) => s + (w.amount || 0), 0);
+}
+function currentDep() {
+  let dep = startDep();
+  S.days.sort((a,b) => a.date.localeCompare(b.date)).forEach(day => {
+    if (day.sessions && day.sessions.length) {
+      dep = day.sessions[day.sessions.length - 1].endDep;
+    }
+  });
+  return dep;
+}
+function netDep() {
+  // current deposit minus what was already withdrawn
+  return currentDep() - totalWithdrawn();
+}
+function depBeforeDate(str) {
+  let dep = startDep();
+  const sorted = S.days.filter(d => d.date < str).sort((a,b) => a.date.localeCompare(b.date));
+  sorted.forEach(day => {
+    if (day.sessions && day.sessions.length) dep = day.sessions[day.sessions.length-1].endDep;
+  });
+  return dep;
+}
+function dayPnl(day) {
+  if (!day || !day.sessions || !day.sessions.length) return 0;
+  return day.sessions.reduce((s, sess) => s + sess.pnl, 0);
+}
+function getDay(str) { return S.days.find(d => d.date === str) || null; }
+
+// ── DAYS LIST ──
+function buildDaysList() {
+  const cfg = S.cfg;
+  const total = cfg.totalDays || 30;
+  const start = cfg.startDate || todayStr();
+  const list = [];
+  for (let i = 0; i < total; i++) list.push(addDays(start, i));
+  return list;
+}
+
+// ── STATS ──
+function calcStats() {
+  const filled = S.days.filter(d => d.sessions && d.sessions.length > 0);
+  if (!filled.length) return null;
+  const pnls = filled.map(d => dayPnl(d));
+  const totalPnl = pnls.reduce((s,v) => s+v, 0);
+  const winDays = pnls.filter(p => p>0).length;
+  const lossDays = pnls.filter(p => p<0).length;
+  const avgPnl = totalPnl / filled.length;
+  const bestIdx = pnls.indexOf(Math.max(...pnls));
+  const worstIdx = pnls.indexOf(Math.min(...pnls));
+  // sessions breakdown
+  let selfPnl = 0, traderPnl = 0, selfSess = 0, traderSess = 0;
+  S.days.forEach(day => {
+    (day.sessions||[]).forEach(sess => {
+      if (sess.type === 'self') { selfPnl += sess.pnl; selfSess++; }
+      else { traderPnl += sess.pnl; traderSess++; }
+    });
+  });
+  // equity curve
+  let dep = startDep();
+  const equity = [];
+  const allDates = buildDaysList();
+  allDates.forEach(date => {
+    const day = getDay(date);
+    if (day && day.sessions && day.sessions.length) {
+      dep = day.sessions[day.sessions.length-1].endDep;
+    }
+    equity.push(dep);
+  });
+  // drawdown
+  let peak = startDep(), mdd = 0;
+  equity.forEach(v => { peak = Math.max(peak,v); mdd = Math.max(mdd, peak>0?(peak-v)/peak:0); });
+  return { n: filled.length, totalPnl, winDays, lossDays, avgPnl,
+    bestDay: filled[bestIdx], worstDay: filled[worstIdx],
+    selfPnl, traderPnl, selfSess, traderSess, equity, mdd, allPnls: pnls };
+}
+
+// ── DAILY NEEDED CALC ──
+// Повертає $ скільки треба заробити на день = депозит × dailyPct%
+function dailyNeeded(dateStr) {
+  const cfg = S.cfg;
+  if (!cfg.dailyPct) return null;
+  const dep = depBeforeDate(dateStr);
+  if (dep <= 0) return null;
+  return dep * (cfg.dailyPct / 100);
+}
+
+// ── HEADER ──
+function updHdr() {
+  const tradingDep = currentDep();
+  const tw = totalWithdrawn();
+  const displayDep = tradingDep - tw;
+  const tdStr = todayStr();
+  const today = getDay(tdStr);
+  const todayPnl = dayPnl(today);
+  document.getElementById('hdr-val').textContent = `$${f(displayDep,2)}`;
+  document.getElementById('hdr-val').style.color = displayDep >= startDep() ? 'var(--txt)' : 'var(--dn)';
+  const elLbl = document.getElementById('hdr-lbl');
+  elLbl.textContent = tw > 0 ? `Депозит · -$${f(tw,0)} вивед.` : 'Депозит USD';
+  const el = document.getElementById('hdr-chg');
+  if (todayPnl !== 0) {
+    el.textContent = `${sg(todayPnl)}$${fa(todayPnl,2)} сьогодні`;
+    el.style.color = todayPnl > 0 ? 'var(--up)' : 'var(--dn)';
+  } else el.textContent = '';
+}
+
+// ── NAV ──
+const TABS = [{ico:'📅',lbl:'Дні'},{ico:'📊',lbl:'Аналіз'},{ico:'🎯',lbl:'Ціль'},{ico:'⚙️',lbl:'Нал.'}];
+function buildNav() {
+  document.getElementById('bnav').innerHTML = TABS.map((t,i) =>
+    `<button class="nb${i===S.tab?' on':''}" onclick="setTab(${i})"><span class="ni">${t.ico}</span>${t.lbl}</button>`
+  ).join('');
+}
+function setTab(t) { S.tab = t; save(); buildNav(); render(); }
+
+// ── RENDER ROUTER ──
+function render() {
+  updHdr();
+  const p = document.getElementById('page');
+  try {
+    let h = '';
+    if (S.tab === 0) h = renderDays();
+    else if (S.tab === 1) h = renderAnalytics();
+    else if (S.tab === 2) h = renderGoal();
+    else h = renderSettings();
+    p.innerHTML = `<div class="fu">${h}</div>`;
+  } catch(e) {
+    p.innerHTML = `<div style="padding:20px;color:var(--dn);font-size:12px;font-family:'JetBrains Mono',monospace">Помилка: ${e.message}<br><br><button onclick="localStorage.clear();location.reload()" style="background:var(--dn);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">СКИНУТИ</button></div>`;
+    console.error(e);
+  }
+}
+
+// ── TAB 0: DAYS ──
+function renderDays() {
+  const cfg = S.cfg;
+  const dep = netDep();
+  const goal = cfg.goal || 0;
+  const prog = goal > 0 ? Math.min(dep / goal, 1) : 0;
+  const allDates = buildDaysList();
+  const tdStr = todayStr();
+  const st = calcStats();
+
+  // Goal reached banner
+  let banner = '';
+  if (goal > 0 && dep >= goal) {
+    banner = `<div class="goal-banner goal-reached">
+      <div style="font-size:22px;margin-bottom:6px">🏆</div>
+      <div style="font-size:15px;font-weight:700;color:var(--up)">Ціль досягнута!</div>
+      <div style="font-size:11px;color:var(--txt2);margin-top:4px">Депозит $${f(dep,2)} ≥ ціль $${f(goal,0)} — можна зупинити торгівлю</div>
+    </div>`;
+  }
+
+  // Progress
+  let topCard = `<div class="card"><div class="cb">
+    <div class="ct">Прогрес до цілі</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--up)">$${f(dep,2)}</span>
+      <span style="font-size:11px;color:var(--txt3)">з $${f(goal,0)}</span>
+    </div>
+    <div class="pt"><div class="pf pf-up" style="width:${(prog*100).toFixed(1)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px">
+      <span style="font-size:10px;color:var(--txt3)">${(prog*100).toFixed(1)}%</span>
+      <span style="font-size:10px;color:var(--txt3)">Потрібно: ${goal>dep?`+$${f(goal-dep,0)}`:'✅'}</span>
+    </div>
+  </div></div>`;
+
+  // Chips: stats
+  let chips = '';
+  if (st) {
+    chips = `<div class="chips">
+      <div class="chip"><div class="chip-v" style="color:var(--up)">${st.winDays}</div><div class="chip-l">Прибутк.</div></div>
+      <div class="chip"><div class="chip-v" style="color:var(--dn)">${st.lossDays}</div><div class="chip-l">Збиткові</div></div>
+      <div class="chip"><div class="chip-v" style="color:${st.avgPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.avgPnl)}$${f(Math.abs(st.avgPnl),1)}</div><div class="chip-l">Сер/день</div></div>
+    </div>`;
+  }
+
+  // Days list
+  let daysList = '';
+  allDates.forEach((date, i) => {
+    const day = getDay(date);
+    const pnl = dayPnl(day);
+    const isTd = date === tdStr;
+    const isFuture = date > tdStr;
+    const depBefore = depBeforeDate(date);
+    const depNow = dep;
+    const needed = dailyNeeded(date);
+    const pct = depBefore > 0 ? pnl/depBefore*100 : 0;
+
+    // session types summary
+    let typeBadges = '';
+    if (day && day.sessions && day.sessions.length) {
+      const hasSelf = day.sessions.some(s => s.type==='self');
+      const hasTrader = day.sessions.some(s => s.type==='trader');
+      const selfSum = day.sessions.filter(s=>s.type==='self').reduce((a,s)=>a+s.pnl,0);
+      const traderSum = day.sessions.filter(s=>s.type==='trader').reduce((a,s)=>a+s.pnl,0);
+      if (hasSelf) typeBadges += `<span class="stype stype-self">👤 ${sg(selfSum)}$${fa(selfSum,1)}</span>`;
+      if (hasTrader) typeBadges += `<span class="stype stype-trader">🤝 ${sg(traderSum)}$${fa(traderSum,1)}</span>`;
+    }
+
+    let cls = 'di';
+    if (pnl > 0) cls += ' pos';
+    else if (pnl < 0) cls += ' neg';
+    else if (day) cls += ' zero';
+    if (isTd) cls += ' today';
+    if (isFuture) cls += ' future';
+
+    const numCls = isTd ? 'di-num today-n' : 'di-num';
+    const pnlColor = pnl > 0 ? 'var(--up)' : pnl < 0 ? 'var(--dn)' : 'var(--txt3)';
+
+    let rightContent = '';
+    if (day && day.sessions && day.sessions.length) {
+      rightContent = `<div class="di-pnl" style="color:${pnlColor}">${sg(pnl)}$${fa(pnl,2)}</div>
+        <div class="di-pct" style="color:${pnlColor}">${sg(pct)}${Math.abs(pct).toFixed(1)}%</div>`;
+    } else if (!isFuture) {
+      rightContent = `<div class="di-pnl" style="color:var(--txt3)">—</div>`;
+    }
+
+    let needHtml = '';
+    if (!isFuture && needed > 0) {
+      const depB = depBeforeDate(date);
+      if (day && day.sessions && day.sessions.length) {
+        // show how much done vs target
+        const done = dayPnl(day);
+        const left = needed - done;
+        if (left > 0.01) {
+          needHtml = `<span style="color:var(--gold);font-size:9px">До цілі дня: +$${f(left,1)}</span>`;
+        } else {
+          needHtml = `<span style="color:var(--up);font-size:9px">✅ Ціль дня виконана</span>`;
+        }
+      } else {
+        needHtml = `<span style="color:var(--gold);font-size:9px">Ціль дня: +$${f(needed,1)} (${S.cfg.dailyPct}%)</span>`;
+      }
+    }
+
+    daysList += `<div class="${cls}" onclick="openDay('${date}')">
+      <div class="${numCls}">${i+1}</div>
+      <div class="di-body">
+        <div class="di-date">${fmtDate(date)}${isTd?' · Сьогодні':''}</div>
+        <div class="di-sub">${typeBadges}${needHtml}</div>
+      </div>
+      <div class="di-right">${rightContent}</div>
+    </div>`;
+  });
+
+  return banner + topCard + chips + daysList;
+}
+
+// ── TAB 1: ANALYTICS ──
+function renderAnalytics() {
+  const st = calcStats();
+  if (!st) return `<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Ще немає даних.<br>Внесіть перші сесії в журналі.</div></div>`;
+
+  const dep = netDep();
+  const cfg = S.cfg;
+  const totalPnlPct = cfg.dep > 0 ? (st.totalPnl/cfg.dep*100).toFixed(1) : 0;
+  const wr = st.n > 0 ? (st.winDays/st.n*100).toFixed(0) : 0;
+
+  // Profit Factor
+  const grossWin = st.allPnls ? st.allPnls.filter(p=>p>0).reduce((s,v)=>s+v,0) : 0;
+  const grossLoss = st.allPnls ? Math.abs(st.allPnls.filter(p=>p<0).reduce((s,v)=>s+v,0)) : 0;
+  const pf = grossLoss > 0 ? (grossWin/grossLoss).toFixed(2) : grossWin > 0 ? '∞' : '—';
+  const pfNum = grossLoss > 0 ? grossWin/grossLoss : null;
+
+  // Current streak
+  const filled = S.days.filter(d=>d.sessions&&d.sessions.length).sort((a,b)=>a.date.localeCompare(b.date));
+  let streak = 0, streakType = '';
+  if (filled.length) {
+    const last = filled[filled.length-1];
+    streakType = dayPnl(last) >= 0 ? 'win' : 'loss';
+    for (let i = filled.length-1; i >= 0; i--) {
+      const p = dayPnl(filled[i]);
+      if (streakType === 'win' && p >= 0) streak++;
+      else if (streakType === 'loss' && p < 0) streak++;
+      else break;
+    }
+  }
+
+  // Weekly PnL breakdown
+  const weeklyMap = {};
+  filled.forEach(day => {
+    const d = new Date(day.date+'T00:00:00');
+    const yr = d.getFullYear();
+    const wk = getWeekNumber(d);
+    const key = `${yr}-W${String(wk).padStart(2,'0')}`;
+    weeklyMap[key] = (weeklyMap[key] || 0) + dayPnl(day);
+  });
+  const weekKeys = Object.keys(weeklyMap).sort();
+  let weeklyHtml = '';
+  if (weekKeys.length > 1) {
+    const wVals = weekKeys.map(k => weeklyMap[k]);
+    const wMax = Math.max(...wVals.map(Math.abs), 1);
+    const bars = weekKeys.map((k, i) => {
+      const v = wVals[i];
+      const pct = Math.abs(v)/wMax*100;
+      const col = v >= 0 ? 'var(--up)' : 'var(--dn)';
+      const lbl = k.replace(/^\d{4}-/,'');
+      return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+        <div style="font-size:8px;color:${col};font-family:'JetBrains Mono',monospace;font-weight:700">${v>=0?'+':''}${f(v,0)}</div>
+        <div style="width:100%;height:50px;display:flex;align-items:${v>=0?'flex-end':'flex-start'};background:var(--bg4);border-radius:4px;overflow:hidden">
+          <div style="width:100%;height:${pct}%;background:${col};border-radius:4px;min-height:2px;opacity:.85"></div>
+        </div>
+        <div style="font-size:8px;color:var(--txt3)">${lbl}</div>
+      </div>`;
+    }).join('');
+    weeklyHtml = `<div class="card"><div class="cb">
+      <div class="ct">📅 P&L по тижнях</div>
+      <div style="display:flex;gap:4px;align-items:flex-end">${bars}</div>
+    </div></div>`;
+  }
+
+  // Day-of-week analysis
+  const dowPnl = [0,0,0,0,0,0,0];
+  const dowCount = [0,0,0,0,0,0,0];
+  filled.forEach(day => {
+    const dow = new Date(day.date+'T00:00:00').getDay();
+    dowPnl[dow] += dayPnl(day);
+    dowCount[dow]++;
+  });
+  const dowNames = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+  const dowMax = Math.max(...dowPnl.map(Math.abs), 1);
+  const dowBars = dowNames.map((n, i) => {
+    if (!dowCount[i]) return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="width:100%;height:40px;background:var(--bg4);border-radius:4px"></div>
+      <div style="font-size:9px;color:var(--txt3)">${n}</div></div>`;
+    const v = dowPnl[i];
+    const pct = Math.abs(v)/dowMax*100;
+    const col = v >= 0 ? 'var(--up)' : 'var(--dn)';
+    return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px">
+      <div style="font-size:8px;color:${col};font-family:'JetBrains Mono',monospace">${v>=0?'+':''}${f(v,0)}</div>
+      <div style="width:100%;height:40px;display:flex;align-items:flex-end;background:var(--bg4);border-radius:4px;overflow:hidden">
+        <div style="width:100%;height:${pct}%;background:${col};border-radius:4px;min-height:2px;opacity:.85"></div>
+      </div>
+      <div style="font-size:9px;color:var(--txt3)">${n}</div></div>`;
+  }).join('');
+
+  // equity chart
+  let chartHtml = '';
+  if (st.equity.length > 1) {
+    const W=380, H=100;
+    const mn=Math.min(...st.equity, cfg.dep), mx=Math.max(...st.equity, cfg.dep);
+    const rng=mx-mn||1;
+    const pts = st.equity.map((v,i) => {
+      const x = Math.round(i/(st.equity.length-1)*W);
+      const y = Math.round(H-(v-mn)/rng*H);
+      return `${x},${y}`;
+    });
+    const fill = `${pts[0].split(',')[0]},${H} ${pts.join(' ')} ${pts[pts.length-1].split(',')[0]},${H}`;
+    const color = dep >= cfg.dep ? 'var(--up)' : 'var(--dn)';
+    const gradId = dep >= cfg.dep ? 'cg-up' : 'cg-dn';
+    chartHtml = `<div class="card"><div class="cb">
+      <div class="ct">Equity Curve</div>
+      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="overflow:visible">
+        <defs>
+          <linearGradient id="${gradId}" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="${color}" stop-opacity=".25"/>
+            <stop offset="100%" stop-color="${color}" stop-opacity=".02"/>
+          </linearGradient>
+        </defs>
+        <line x1="0" y1="${Math.round(H-(cfg.dep-mn)/rng*H)}" x2="${W}" y2="${Math.round(H-(cfg.dep-mn)/rng*H)}" stroke="rgba(0,0,0,.12)" stroke-dasharray="4,4" stroke-width="1"/>
+        <polygon points="${fill}" fill="url(#${gradId})"/>
+        <polyline points="${pts.join(' ')}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <circle cx="${pts[pts.length-1].split(',')[0]}" cy="${pts[pts.length-1].split(',')[1]}" r="4" fill="${color}"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;margin-top:6px;font-size:9px;color:var(--txt3);font-family:'JetBrains Mono',monospace">
+        <span>$${f(cfg.dep,0)}</span><span>Поточний: $${f(dep,2)}</span>
+      </div>
+    </div></div>`;
+  }
+
+  // Self vs Trader breakdown
+  const totalSess = st.selfSess + st.traderSess;
+  const selfWidth = totalSess > 0 ? (st.selfSess/totalSess*100).toFixed(0) : 0;
+  const traderWidth = totalSess > 0 ? (100 - selfWidth) : 0;
+
+  const streakColor = streakType === 'win' ? 'var(--up)' : 'var(--dn)';
+  const streakLabel = streakType === 'win' ? `🔥 ${streak} перемог поспіль` : `❄️ ${streak} збитків поспіль`;
+
+  const tw = totalWithdrawn();
+
+  return `${chartHtml}
+  <div class="chips">
+    <div class="chip"><div class="chip-v" style="color:${dep>=cfg.dep?'var(--up)':'var(--dn)'}">${sg(st.totalPnl)}$${fa(st.totalPnl,2)}</div><div class="chip-l">Всього P&L</div></div>
+    <div class="chip"><div class="chip-v">${wr}%</div><div class="chip-l">Win Rate</div></div>
+    <div class="chip"><div class="chip-v" style="color:var(--dn)">${(st.mdd*100).toFixed(1)}%</div><div class="chip-l">Max DD</div></div>
+  </div>
+  <div class="chips">
+    <div class="chip"><div class="chip-v" style="color:${pfNum===null?'var(--txt3)':pfNum>=1.5?'var(--up)':pfNum>=1?'var(--gold)':'var(--dn)'}">${pf}</div><div class="chip-l">Profit Factor</div></div>
+    <div class="chip"><div class="chip-v" style="color:${streakColor}">${streak}</div><div class="chip-l">${streakType==='win'?'🔥 Серія':'❄️ Серія'}</div></div>
+    ${tw > 0 ? `<div class="chip"><div class="chip-v" style="color:var(--blue)">$${f(tw,0)}</div><div class="chip-l">Виведено</div></div>` : `<div class="chip"><div class="chip-v" style="color:var(--txt3)">${st.n}</div><div class="chip-l">Днів</div></div>`}
+  </div>
+  <div class="card"><div class="cb">
+    <div class="ct">📆 По днях тижня</div>
+    <div style="display:flex;gap:4px">${dowBars}</div>
+  </div></div>
+  ${weeklyHtml}
+  <div class="card"><div class="cb">
+    <div class="ct">👤 Сам vs 🤝 З трейдером</div>
+    <div style="display:flex;gap:10px;margin-bottom:12px">
+      <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(0,168,112,.15)">
+        <div style="font-size:9px;color:var(--txt3);margin-bottom:4px">👤 САМ</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:${st.selfPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.selfPnl)}$${fa(st.selfPnl,2)}</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:3px">${st.selfSess} сесій</div>
+      </div>
+      <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center;border:1px solid rgba(29,111,216,.15)">
+        <div style="font-size:9px;color:var(--txt3);margin-bottom:4px">🤝 ТРЕЙДЕР</div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:${st.traderPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.traderPnl)}$${fa(st.traderPnl,2)}</div>
+        <div style="font-size:9px;color:var(--txt3);margin-top:3px">${st.traderSess} сесій</div>
+      </div>
+    </div>
+    <div style="height:8px;border-radius:4px;overflow:hidden;display:flex;gap:2px">
+      ${selfWidth>0?`<div style="width:${selfWidth}%;background:linear-gradient(90deg,var(--up2),var(--up));border-radius:4px"></div>`:''}
+      ${traderWidth>0?`<div style="width:${traderWidth}%;background:linear-gradient(90deg,#1a5acc,var(--blue));border-radius:4px"></div>`:''}
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:9px;color:var(--txt3)">
+      <span>👤 ${selfWidth}%</span><span>🤝 ${100-selfWidth}%</span>
+    </div>
+  </div></div>
+  <div class="card"><div class="cb">
+    <div class="ct">Детальна статистика</div>
+    <div class="sr"><span class="sl">Заповнено днів</span><span class="sv">${st.n} з ${S.cfg.totalDays||30}</span></div>
+    <div class="sr"><span class="sl">Прибуткових днів</span><span class="sv" style="color:var(--up)">${st.winDays}</span></div>
+    <div class="sr"><span class="sl">Збиткових днів</span><span class="sv" style="color:var(--dn)">${st.lossDays}</span></div>
+    <div class="sr"><span class="sl">Середній P&L/день</span><span class="sv" style="color:${st.avgPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.avgPnl)}$${fa(st.avgPnl,2)}</span></div>
+    <div class="sr"><span class="sl">Всього P&L</span><span class="sv" style="color:${st.totalPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.totalPnl)}$${fa(st.totalPnl,2)} (${totalPnlPct}%)</span></div>
+    ${tw>0?`<div class="sr"><span class="sl">Виведено з депозиту</span><span class="sv" style="color:var(--dn)">-$${f(tw,2)}</span></div>`:''}
+    <div class="sr"><span class="sl">Кращий день</span><span class="sv" style="color:var(--up)">${st.bestDay?`+$${f(dayPnl(st.bestDay),2)} · ${fmtDate(st.bestDay.date)}`:'—'}</span></div>
+    <div class="sr"><span class="sl">Найгірший день</span><span class="sv" style="color:var(--dn)">${st.worstDay?`${sg(dayPnl(st.worstDay))}$${fa(dayPnl(st.worstDay),2)} · ${fmtDate(st.worstDay.date)}`:'—'}</span></div>
+    <div class="sr"><span class="sl">Макс. просадка</span><span class="sv" style="color:var(--dn)">${(st.mdd*100).toFixed(1)}%</span></div>
+    <div class="sr"><span class="sl">Profit Factor</span><span class="sv" style="color:${pfNum===null?'var(--txt3)':pfNum>=1.5?'var(--up)':pfNum>=1?'var(--gold)':'var(--dn)'}">${pf}</span></div>
+  </div></div>`;
+}
+
+function getWeekNumber(d) {
+  const date = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+  date.setUTCDate(date.getUTCDate() + 4 - (date.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(date.getUTCFullYear(), 0, 1));
+  return Math.ceil((((date - yearStart) / 86400000) + 1) / 7);
+}
+
+// ── TAB 2: GOAL ──
+function renderGoal() {
+  const cfg = S.cfg;
+  const dep = netDep();
+  const goal = cfg.goal || 0;
+  const dailyPct = cfg.dailyPct || 2;
+  const dailyTarget = dep * (dailyPct/100);
+  const allDates = buildDaysList();
+  const tdStr = todayStr();
+  const filledDays = S.days.filter(d => d.sessions && d.sessions.length);
+  const st = calcStats();
+
+  // Projection
+  let projHtml = '';
+  if (st && st.avgPnl > 0) {
+    const idx = allDates.indexOf(tdStr);
+    const remainDays = allDates.filter(d => d >= tdStr).length;
+    const projected = dep + st.avgPnl * remainDays;
+    const willReach = projected >= goal;
+    const daysToGoal = st.avgPnl > 0 ? Math.ceil((goal-dep)/st.avgPnl) : null;
+    projHtml = `<div class="card"><div class="cb">
+      <div class="ct">🔮 Прогноз</div>
+      <div style="font-size:10px;color:var(--txt3);margin-bottom:10px">На основі середнього <span style="color:var(--up);font-weight:700">+$${f(st.avgPnl,2)}/день</span> за ${st.n} д.</div>
+      <div style="display:flex;gap:8px">
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${projected>=dep?'var(--up)':'var(--dn)'}">$${f(projected,0)}</div>
+          <div style="font-size:9px;color:var(--txt3);margin-top:3px">Деп. в кінці</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${remainDays>0?'var(--txt)':'var(--txt3)'}">×${remainDays}</div>
+          <div style="font-size:9px;color:var(--txt3);margin-top:3px">Днів залишилось</div>
+        </div>
+        <div style="flex:1;background:var(--bg3);border-radius:10px;padding:10px;text-align:center">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${willReach?'var(--up)':'var(--dn)'}">
+            ${willReach ? '✅' : daysToGoal ? `${daysToGoal}д` : '❌'}
+          </div>
+          <div style="font-size:9px;color:var(--txt3);margin-top:3px">${willReach?'Досягнеш':'До цілі'}</div>
+        </div>
+      </div>
+    </div></div>`;
+  }
+
+  const goalReached = goal > 0 && dep >= goal;
+  const pct = goal > 0 ? Math.min(dep/goal*100, 100) : 0;
+
+  return `${goalReached ? `<div class="goal-banner goal-reached">
+    <div style="font-size:28px;margin-bottom:8px">🏆</div>
+    <div style="font-size:17px;font-weight:700;color:var(--up)">Ціль досягнута!</div>
+    <div style="font-size:12px;color:var(--txt2);margin-top:6px;line-height:1.6">Депозит <strong>$${f(dep,2)}</strong> досяг цілі <strong>$${f(goal,0)}</strong><br>Торгівлю можна зупинити 🎉</div>
+  </div>` : ''}
+  <div class="card"><div class="cb">
+    <div class="ct">Ціль та прогрес</div>
+    <div class="sr"><span class="sl">Початковий депозит</span><span class="sv">$${f(cfg.dep,2)}</span></div>
+    <div class="sr"><span class="sl">Поточний депозит</span><span class="sv" style="color:${dep>=cfg.dep?'var(--up)':'var(--dn)'}">$${f(dep,2)}</span></div>
+    <div class="sr"><span class="sl">Ціль</span><span class="sv" style="color:var(--gold)">$${f(goal,0)}</span></div>
+    <div class="sr"><span class="sl">Залишилось</span><span class="sv" style="color:${dep>=goal?'var(--up)':'var(--txt2)'}">${dep>=goal?'✅ Виконано':`$${f(goal-dep,2)}`}</span></div>
+    <div style="margin-top:10px">
+      <div class="pt"><div class="pf pf-up" style="width:${pct.toFixed(1)}%"></div></div>
+      <div style="text-align:center;margin-top:5px;font-size:11px;color:var(--txt3)">${pct.toFixed(1)}%</div>
+    </div>
+  </div></div>
+  <div class="card"><div class="cb">
+    <div class="ct">Денна ціль</div>
+    <div class="sr"><span class="sl">Ціль прибутку на день</span><span class="sv" style="color:var(--gold)">${dailyPct}% від депозиту</span></div>
+    <div class="sr"><span class="sl">Сьогодні потрібно заробити</span><span class="sv" style="color:var(--up)">+$${f(dailyTarget,2)}</span></div>
+    ${st ? `<div class="sr"><span class="sl">Середній реальний/день</span><span class="sv" style="color:${st.avgPnl>=0?'var(--up)':'var(--dn)'}">${sg(st.avgPnl)}$${fa(st.avgPnl,2)}</span></div>
+    <div class="sr"><span class="sl">Порівняно з ціллю</span><span class="sv" style="color:${st.avgPnl>=dailyTarget?'var(--up)':'var(--dn)'}">${st.avgPnl>=dailyTarget?'✅ Вище цілі':'⚠️ Нижче цілі'}</span></div>` : ''}
+  </div></div>
+  ${projHtml}
+  <div class="card"><div class="cb">
+    <div class="ct">💡 Рекомендації PocketOption</div>
+    <div style="font-size:11px;color:var(--txt2);line-height:1.8">
+      <div style="padding:6px 0;border-bottom:1px solid var(--brd)">📌 <strong style="color:var(--txt)">Мані-менеджмент:</strong> ставка ≤ ${cfg.stake?`$${f(cfg.stake,0)}`:'1-3%'} від депозиту</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--brd)">⏰ <strong style="color:var(--txt)">Торгові вікна:</strong> 9:00–11:00, 14:00–16:00, 20:00–22:00 (UTC+2)</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--brd)">📉 <strong style="color:var(--txt)">Стоп-лос:</strong> -${cfg.stopLoss||10}% від денного депозиту — зупинка</div>
+      <div style="padding:6px 0;border-bottom:1px solid var(--brd)">🎯 <strong style="color:var(--txt)">Ціль/день:</strong> +${dailyPct}% = $${f(dailyTarget,2)} — потім зупинитись</div>
+      <div style="padding:6px 0">🔄 <strong style="color:var(--txt)">Ліміт угод:</strong> max ${cfg.maxDeals||20} угод/день, мін ${cfg.minDeals||3} для статистики</div>
+    </div>
+  </div></div>`;
+}
+
+// ── TAB 3: SETTINGS PAGE ──
+function renderSettings() {
+  const cfg = S.cfg;
+  const tradingDep = currentDep();
+  const tw = totalWithdrawn();
+  const dep = tradingDep - tw;
+  let html = '';
+  html += '<div class="card"><div class="cb">';
+  html += '<div class="ct">Поточні налаштування</div>';
+  html += '<div class="sr"><span class="sl">Дата початку</span><span class="sv">' + (cfg.startDate ? fmtDate(cfg.startDate) : '—') + '</span></div>';
+  html += '<div class="sr"><span class="sl">Початковий депозит</span><span class="sv">$' + f(cfg.dep,2) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Поточний депозит</span><span class="sv" style="color:' + (dep>=cfg.dep?'var(--up)':'var(--dn)') + '">$' + f(dep,2) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Кількість днів</span><span class="sv">' + (cfg.totalDays||30) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Мін. ставка</span><span class="sv">$' + f(cfg.stake,2) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Payout</span><span class="sv">' + (cfg.payout||92) + '%</span></div>';
+  html += '<div class="sr"><span class="sl">Мін. угод/день</span><span class="sv">' + (cfg.minDeals||3) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Макс. угод/день</span><span class="sv">' + (cfg.maxDeals||20) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Стоп-лос/день</span><span class="sv" style="color:var(--dn)">' + (cfg.stopLoss||10) + '%</span></div>';
+  html += '<div class="sr"><span class="sl">Ціль депозиту</span><span class="sv" style="color:var(--gold)">$' + f(cfg.goal,0) + '</span></div>';
+  html += '<div class="sr"><span class="sl">Ціль прибутку/день</span><span class="sv" style="color:var(--up)">' + (cfg.dailyPct||2) + '%</span></div>';
+  if (tw > 0) {
+    html += '<div class="sr"><span class="sl">Виведено всього</span><span class="sv" style="color:var(--dn)">-$' + f(tw,2) + '</span></div>';
+  }
+  html += '</div></div>';
+  html += '<button class="btn-sm" style="width:100%;margin-bottom:10px;color:var(--up);border-color:rgba(0,168,112,.25)" onclick="openSettings()">✏️ Редагувати налаштування</button>';
+  html += '<button class="btn-sm" style="width:100%;margin-bottom:10px;color:var(--dn);border-color:rgba(224,37,60,.25)" onclick="openWithdraw()">💸 Вивід коштів</button>';
+  html += '<div class="btn-row">';
+  html += '<button class="btn-sm btn-export" onclick="exportCSV()">📥 Експорт CSV</button>';
+  html += '<button class="btn-sm btn-import" onclick="openImportModal()">📤 Імпорт CSV</button>';
+  html += '</div>';
+  html += '<div style="background:rgba(245,197,66,.08);border:1px solid rgba(245,197,66,.2);border-radius:12px;padding:11px 13px;margin:6px 0 8px;font-size:11px;color:var(--gold);line-height:1.7">';
+  html += '<strong>💾 Збереження даних:</strong><br>Дані зберігаються в браузері (localStorage).<br>Регулярно робіть <strong>Експорт CSV</strong> — це ваш backup!';
+  html += '</div>';
+  html += '<button class="btn-sm btn-danger" style="width:100%;margin-top:4px" onclick="openReset()">🗑 Скинути всі дані</button>';
+  return html;
+}
+// ── DAY MODAL ──
+let _editDate = '';
+function openDay(str) {
+  _editDate = str;
+  const day = getDay(str);
+  const tdStr = todayStr();
+  const isTd = str === tdStr;
+  const depBefore = depBeforeDate(str);
+  const pnl = dayPnl(day);
+  const needed = dailyNeeded(str);
+  const cfg = S.cfg;
+  const stopLossAmt = depBefore * (cfg.stopLoss||10) / 100;
+  const dailyTargetAmt = depBefore * (cfg.dailyPct||2) / 100;
+
+  document.getElementById('dm-title').textContent = fmtDate(str) + (isTd ? ' · Сьогодні' : '');
+
+  let subInfo = `Деп. на початок дня: $${f(depBefore,2)}`;
+  if (needed > 0 && (!day || !day.sessions?.length)) subInfo += ` · Треба: +$${f(needed,1)}`;
+  document.getElementById('dm-sub').textContent = subInfo;
+
+  renderSessionsList(str);
+  document.getElementById('dm-add-form').style.display = 'none';
+  document.getElementById('dm-add-btn-wrap').style.display = 'block';
+
+  const delWrap = document.getElementById('dm-del-wrap');
+  delWrap.style.display = (day && day.sessions && day.sessions.length) ? 'block' : 'none';
+
+  document.getElementById('ov-day').classList.add('open');
+}
+
+function renderSessionsList(dateStr) {
+  const day = getDay(dateStr);
+  const sessions = day?.sessions || [];
+  const depBefore = depBeforeDate(dateStr);
+  const container = document.getElementById('dm-sessions-list');
+
+  if (!sessions.length) {
+    container.innerHTML = `<div style="text-align:center;padding:16px 0;color:var(--txt3);font-size:12px">Немає сесій — додайте першу 👇</div>`;
+    return;
+  }
+
+  let html = `<div style="font-size:9px;color:var(--txt3);font-family:'JetBrains Mono',monospace;letter-spacing:2px;margin-bottom:8px">СЕСІЇ</div>`;
+  let runDep = depBefore;
+  sessions.forEach((sess, idx) => {
+    const color = sess.pnl >= 0 ? 'var(--up)' : 'var(--dn)';
+    const typeLabel = sess.type === 'self' ? '👤 Сам' : '🤝 Трейдер';
+    const typeCls = sess.type === 'self' ? 'stype-self' : 'stype-trader';
+    html += `<div class="sess-item">
+      <div class="sess-left">
+        <div class="sess-idx">${idx+1}</div>
+        <div>
+          <span class="stype ${typeCls}">${typeLabel}</span>
+          ${sess.note ? `<div style="font-size:10px;color:var(--txt3);margin-top:3px">${sess.note}</div>` : ''}
+          <div style="font-size:10px;color:var(--txt3);margin-top:2px">$${f(sess.startDep,2)} → $${f(sess.endDep,2)}</div>
+        </div>
+      </div>
+      <div class="sess-right">
+        <div class="sess-pnl" style="color:${color}">${sg(sess.pnl)}$${fa(sess.pnl,2)}</div>
+        <button class="sess-del" onclick="deleteSession('${dateStr}',${idx})">✕</button>
+      </div>
+    </div>`;
+    runDep = sess.endDep;
+  });
+
+  const totalPnl = sessions.reduce((s,ss) => s+ss.pnl, 0);
+  const color = totalPnl >= 0 ? 'var(--up)' : 'var(--dn)';
+  html += `<div style="display:flex;justify-content:space-between;padding:8px 0;border-top:1px solid var(--brd2);margin-top:4px">
+    <span style="font-size:11px;color:var(--txt2)">Всього за день</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:${color}">${sg(totalPnl)}$${fa(totalPnl,2)}</span>
+  </div>`;
+
+  container.innerHTML = html;
+}
+
+let _sessType = 'self';
+function selType(t) {
+  _sessType = t;
+  document.getElementById('type-self').className = 'type-btn' + (t==='self'?' sel-self':'');
+  document.getElementById('type-trader').className = 'type-btn' + (t==='trader'?' sel-trader':'');
+  dmPreview();
+}
+
+function showAddSession() {
+  document.getElementById('dm-add-btn-wrap').style.display = 'none';
+  document.getElementById('dm-add-form').style.display = 'block';
+  document.getElementById('dm-bal').value = '';
+  document.getElementById('dm-note').value = '';
+  document.getElementById('dm-preview').style.display = 'none';
+  _sessType = 'self';
+  selType('self');
+}
+
+function cancelAddSession() {
+  document.getElementById('dm-add-form').style.display = 'none';
+  document.getElementById('dm-add-btn-wrap').style.display = 'block';
+}
+
+function dmPreview() {
+  const endDep = parseFloat(document.getElementById('dm-bal').value);
+  const day = getDay(_editDate);
+  const sessions = day?.sessions || [];
+  const depBefore = depBeforeDate(_editDate);
+  const startDep_ = sessions.length ? sessions[sessions.length-1].endDep : depBefore;
+  if (isNaN(endDep)) { document.getElementById('dm-preview').style.display='none'; return; }
+  const pnl = endDep - startDep_;
+  const pct = startDep_ > 0 ? (pnl/startDep_*100) : 0;
+  const color = pnl >= 0 ? 'var(--up)' : 'var(--dn)';
+  const typeIcon = _sessType === 'self' ? '👤' : '🤝';
+  document.getElementById('dm-preview').style.display = 'block';
+  document.getElementById('dm-preview').innerHTML =
+    `${typeIcon} Початок: $${f(startDep_,2)} → Кінець: $${f(endDep,2)}<br><span style="color:${color};font-weight:700">${sg(pnl)}$${fa(pnl,2)} (${sg(pct)}${Math.abs(pct).toFixed(2)}%)</span>`;
+}
+
+function saveSession() {
+  const endDepVal = parseFloat(document.getElementById('dm-bal').value);
+  if (isNaN(endDepVal) || endDepVal < 0) { toast('Введіть коректний депозит', 'err'); return; }
+  const note = document.getElementById('dm-note').value.trim();
+
+  const day = getDay(_editDate);
+  const sessions = day?.sessions || [];
+  const depBefore = depBeforeDate(_editDate);
+  const startDep_ = sessions.length ? sessions[sessions.length-1].endDep : depBefore;
+  const pnl = +(endDepVal - startDep_).toFixed(4);
+
+  const sess = { type: _sessType, startDep: startDep_, endDep: endDepVal, pnl, note };
+
+  const idx = S.days.findIndex(d => d.date === _editDate);
+  if (idx >= 0) {
+    S.days[idx].sessions.push(sess);
+  } else {
+    S.days.push({ date: _editDate, sessions: [sess] });
+  }
+
+  save();
+  renderSessionsList(_editDate);
+  cancelAddSession();
+  document.getElementById('dm-del-wrap').style.display = 'block';
+  render();
+  const pnlSign = pnl >= 0 ? '+' : '';
+  toast(`${pnlSign}$${f(pnl,2)} · ${_sessType==='self'?'Сам':'Трейдер'}`, pnl>=0?'ok':'err');
+}
+
+function deleteSession(dateStr, sessIdx) {
+  const idx = S.days.findIndex(d => d.date === dateStr);
+  if (idx < 0) return;
+  S.days[idx].sessions.splice(sessIdx, 1);
+  if (S.days[idx].sessions.length === 0) S.days.splice(idx, 1);
+  save(); renderSessionsList(dateStr); render();
+  document.getElementById('dm-del-wrap').style.display = getDay(dateStr) ? 'block' : 'none';
+  toast('Сесію видалено', 'inf');
+}
+
+function clearDay() {
+  S.days = S.days.filter(d => d.date !== _editDate);
+  save(); closeOv('ov-day'); render(); toast('День очищено', 'inf');
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  const cfg = S.cfg;
+  if (cfg.startDate) document.getElementById('s-startdate').value = cfg.startDate;
+  document.getElementById('s-dep').value = cfg.dep;
+  document.getElementById('s-days').value = cfg.totalDays || 30;
+  document.getElementById('s-stake').value = cfg.stake || 10;
+  document.getElementById('s-payout').value = cfg.payout || 92;
+  document.getElementById('s-mindeals').value = cfg.minDeals || 3;
+  document.getElementById('s-maxdeals').value = cfg.maxDeals || 20;
+  document.getElementById('s-stoploss').value = cfg.stopLoss || 10;
+  document.getElementById('s-goal').value = cfg.goal || '';
+  document.getElementById('s-daily-pct').value = cfg.dailyPct || 2;
+  document.getElementById('ov-sett').classList.add('open');
+}
+
+function saveSettings() {
+  const cfg = S.cfg;
+  const sd = document.getElementById('s-startdate').value;
+  if (sd) cfg.startDate = sd;
+  cfg.dep = parseFloat(document.getElementById('s-dep').value) || cfg.dep;
+  cfg.totalDays = parseInt(document.getElementById('s-days').value) || 30;
+  cfg.stake = parseFloat(document.getElementById('s-stake').value) || 10;
+  cfg.payout = parseFloat(document.getElementById('s-payout').value) || 92;
+  cfg.minDeals = parseInt(document.getElementById('s-mindeals').value) || 3;
+  cfg.maxDeals = parseInt(document.getElementById('s-maxdeals').value) || 20;
+  cfg.stopLoss = parseFloat(document.getElementById('s-stoploss').value) || 10;
+  cfg.goal = parseFloat(document.getElementById('s-goal').value) || 0;
+  cfg.dailyPct = parseFloat(document.getElementById('s-daily-pct').value) || 2;
+  save(); closeOv('ov-sett'); render(); toast('Збережено ✓', 'ok');
+}
+
+// ── RESET ──
+function doReset() {
+  S = clone(DEF);
+  save(); closeOv('ov-reset'); render(); toast('Скинуто', 'inf');
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  const cfg = S.cfg;
+  const allDates = buildDaysList();
+
+  // Block 1: Settings
+  const settRows = [
+    ['#НАЛАШТУВАННЯ','','','','','',''],
+    ['startDate','startDep','totalDays','stake','payout','minDeals','maxDeals','stopLoss','goal','dailyPct'],
+    [cfg.startDate||'', f(cfg.dep,2), cfg.totalDays||30, f(cfg.stake,2),
+     cfg.payout||92, cfg.minDeals||3, cfg.maxDeals||20,
+     cfg.stopLoss||10, f(cfg.goal,2), cfg.dailyPct||2]
+  ];
+
+  // Block 2: Sessions
+  const sessRows = [
+    ['#СЕСІЇ','','','','','',''],
+    ['Дата','Сесія','Тип','Початок $','Кінець $','P&L $','Нотатка']
+  ];
+  allDates.forEach(date => {
+    const day = getDay(date);
+    if (day && day.sessions) {
+      day.sessions.forEach((sess, i) => {
+        sessRows.push([date, i+1, sess.type==='self'?'Сам':'Трейдер',
+          f(sess.startDep,2), f(sess.endDep,2), f(sess.pnl,4), sess.note||'']);
+      });
+    }
+  });
+
+  const allRows = [...settRows, [''], ...sessRows];
+  const csv = allRows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `trade_journal_${todayStr()}.csv`; a.click();
+  URL.revokeObjectURL(url);
+  toast('CSV збережено ✓', 'ok');
+}
+
+// ── IMPORT CSV ──
+function openImportModal() {
+  document.getElementById('csv-paste').value = '';
+  document.getElementById('csv-preview').style.display = 'none';
+  document.getElementById('ov-import').classList.add('open');
+}
+// Preview while typing
+document.addEventListener('DOMContentLoaded', () => {
+  const ta = document.getElementById('csv-paste');
+  if (ta) ta.addEventListener('input', csvPreview);
+});
+function csvPreview() {
+  const text = document.getElementById('csv-paste').value.trim();
+  const prev = document.getElementById('csv-preview');
+  if (!text) { prev.style.display='none'; return; }
+  const lines = text.split('\n').filter(l => l.trim()).length;
+  const dataLines = Math.max(0, lines - 1);
+  prev.style.display = 'block';
+  prev.textContent = `✓ Знайдено рядків: ${dataLines} (${lines} всього)`;
+}
+async function parseAndImportCSV(rawText) {
+  let text = rawText.replace(/^\uFEFF/, '').replace(/\r\n/g,'\n').replace(/\r/g,'\n').trim();
+
+  const firstLine = text.split('\n')[0] || '';
+  let sep = ',';
+  if (firstLine.includes('\t')) sep = '\t';
+  else if (firstLine.includes(';')) sep = ';';
+
+  function splitLine(line) {
+    if (sep !== ',') return line.split(sep).map(v => v.trim().replace(/^"|"$/g,''));
+    const result = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      if (line[i] === '"') { inQ = !inQ; }
+      else if (line[i] === ',' && !inQ) { result.push(cur.trim()); cur = ''; }
+      else cur += line[i];
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  const allLines = text.split('\n').filter(l => l.trim());
+
+  // Parse settings block if present
+  let settImported = false;
+  const settIdx = allLines.findIndex(l => l.includes('#НАЛАШТУВАННЯ'));
+  if (settIdx >= 0 && allLines[settIdx+1] && allLines[settIdx+2]) {
+    const keys = splitLine(allLines[settIdx+1]);
+    const vals = splitLine(allLines[settIdx+2]);
+    const map = {};
+    keys.forEach((k,i) => { map[k] = vals[i] || ''; });
+    if (map['startDate']) S.cfg.startDate = map['startDate'];
+    if (map['startDep'])  S.cfg.dep       = parseFloat(map['startDep'].replace(',','.')) || S.cfg.dep;
+    if (map['totalDays']) S.cfg.totalDays  = parseInt(map['totalDays']) || S.cfg.totalDays;
+    if (map['stake'])     S.cfg.stake      = parseFloat(map['stake'].replace(',','.')) || S.cfg.stake;
+    if (map['payout'])    S.cfg.payout     = parseFloat(map['payout'].replace(',','.')) || S.cfg.payout;
+    if (map['minDeals'])  S.cfg.minDeals   = parseInt(map['minDeals']) || S.cfg.minDeals;
+    if (map['maxDeals'])  S.cfg.maxDeals   = parseInt(map['maxDeals']) || S.cfg.maxDeals;
+    if (map['stopLoss'])  S.cfg.stopLoss   = parseFloat(map['stopLoss'].replace(',','.')) || S.cfg.stopLoss;
+    if (map['goal'])      S.cfg.goal       = parseFloat(map['goal'].replace(',','.')) || S.cfg.goal;
+    if (map['dailyPct'])  S.cfg.dailyPct   = parseFloat(map['dailyPct'].replace(',','.')) || S.cfg.dailyPct;
+    settImported = true;
+  }
+
+  // Find sessions block
+  const sessIdx = allLines.findIndex(l => l.includes('#СЕСІЇ'));
+  let dataLines = allLines;
+  if (sessIdx >= 0) {
+    dataLines = allLines.slice(sessIdx + 2); // skip #СЕСІЇ + header
+  } else {
+    // legacy: skip first line if it's a header
+    const hdr = splitLine(allLines[0] || '');
+    if (hdr[0] && !/^\d{4}-\d{2}-\d{2}$/.test(hdr[0].replace(/^"|"$/g,''))) {
+      dataLines = allLines.slice(1);
+    }
+  }
+
+  const newDays = {};
+  dataLines.forEach(line => {
+    if (!line.trim()) return;
+    const cols = splitLine(line);
+    if (cols.length < 4) return;
+    const date = cols[0].replace(/^"|"$/g,'').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return;
+    const typeRaw  = (cols[2]||'').trim();
+    const startDep = parseFloat((cols[3]||'0').replace(',','.')) || 0;
+    const endDep   = parseFloat((cols[4]||'0').replace(',','.')) || 0;
+    const pnl      = parseFloat((cols[5]||'0').replace(',','.')) || (endDep - startDep);
+    const note     = (cols[6]||'').replace(/^"|"$/g,'').trim();
+    const sess = {
+      type: (typeRaw === 'Сам' || typeRaw === 'self') ? 'self' : 'trader',
+      startDep, endDep, pnl, note
+    };
+    if (!newDays[date]) newDays[date] = [];
+    newDays[date].push(sess);
+  });
+
+  const count = Object.keys(newDays).length;
+  if (!count && !settImported) {
+    toast('Не знайдено даних — перевірте формат', 'err');
+    return;
+  }
+  Object.entries(newDays).forEach(([date, sessions]) => {
+    const idx = S.days.findIndex(d => d.date === date);
+    if (idx >= 0) S.days[idx].sessions = sessions;
+    else S.days.push({ date, sessions });
+  });
+  save(); render(); closeOv('ov-import');
+  const msg = settImported ? `Налаштування + ${count} днів імпортовано ✓` : `Імпортовано ${count} днів ✓`;
+  toast(msg, 'ok');
+}
+async function doImportFromModal() {
+  const text = document.getElementById('csv-paste').value.trim();
+  if (!text) { toast('Спочатку вставте CSV текст', 'err'); return; }
+  try { await parseAndImportCSV(text); }
+  catch(err) { toast('Помилка імпорту: ' + err.message, 'err'); console.error(err); }
+}
+
+// ── WITHDRAWALS ──
+function openWithdraw() {
+  const dep = currentDep();
+  const withdrawn = totalWithdrawn();
+  const available = dep - withdrawn;
+  document.getElementById('wd-amount').value = '';
+  document.getElementById('wd-note').value = '';
+  document.getElementById('wd-date').value = todayStr();
+  document.getElementById('wd-preview').style.display = 'none';
+  renderWithdrawList();
+  document.getElementById('ov-withdraw').classList.add('open');
+}
+function renderWithdrawList() {
+  const list = S.withdrawals || [];
+  const el = document.getElementById('wd-list');
+  if (!list.length) { el.innerHTML = ''; return; }
+  let html = `<div style="font-size:9px;color:var(--txt3);font-family:'JetBrains Mono',monospace;letter-spacing:2px;margin-bottom:6px">ПОПЕРЕДНІ ВИВОДИ</div>`;
+  list.slice().reverse().forEach((w, ri) => {
+    const idx = list.length - 1 - ri;
+    html += `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border:1px solid var(--brd);border-radius:9px;padding:8px 11px;margin-bottom:5px">
+      <div>
+        <div style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--dn)">-$${f(w.amount,2)}</div>
+        <div style="font-size:10px;color:var(--txt3);margin-top:2px">${fmtDate(w.date)}${w.note?' · '+w.note:''}</div>
+      </div>
+      <button onclick="deleteWithdrawal(${idx})" style="background:none;border:none;color:var(--dn);font-size:15px;cursor:pointer;padding:4px">✕</button>
+    </div>`;
+  });
+  const tot = totalWithdrawn();
+  html += `<div style="display:flex;justify-content:space-between;padding:7px 2px;border-top:1px solid var(--brd2);margin-top:4px">
+    <span style="font-size:11px;color:var(--txt2)">Всього виведено</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--dn)">-$${f(tot,2)}</span>
+  </div>`;
+  el.innerHTML = html;
+}
+function wdPreview() {
+  const amt = parseFloat(document.getElementById('wd-amount').value);
+  const el = document.getElementById('wd-preview');
+  if (isNaN(amt) || amt <= 0) { el.style.display='none'; return; }
+  const dep = currentDep();
+  const withdrawn = totalWithdrawn();
+  const after = dep - withdrawn - amt;
+  el.style.display = 'block';
+  el.innerHTML = `Поточний: $${f(dep,2)}<br>Вже виведено: $${f(withdrawn,2)}<br>Після виводу: <span style="color:${after>=0?'var(--up)':'var(--dn)'};font-weight:700">$${f(after,2)}</span>`;
+}
+function saveWithdrawal() {
+  const amt = parseFloat(document.getElementById('wd-amount').value);
+  if (isNaN(amt) || amt <= 0) { toast('Введіть суму виводу', 'err'); return; }
+  const date = document.getElementById('wd-date').value || todayStr();
+  const note = document.getElementById('wd-note').value.trim();
+  if (!S.withdrawals) S.withdrawals = [];
+  S.withdrawals.push({ amount: amt, date, note });
+  S.withdrawals.sort((a,b) => a.date.localeCompare(b.date));
+  save(); renderWithdrawList(); render();
+  document.getElementById('wd-amount').value = '';
+  document.getElementById('wd-preview').style.display = 'none';
+  toast(`-$${f(amt,2)} виведено ✓`, 'inf');
+}
+function deleteWithdrawal(idx) {
+  S.withdrawals.splice(idx, 1);
+  save(); renderWithdrawList(); render();
+  toast('Вивід видалено', 'inf');
+}
+
+// ── OVERLAY / TOAST ──
+function closeOv(id) { document.getElementById(id).classList.remove('open'); }
+function openReset() { document.getElementById('ov-reset').classList.add('open'); }
+function ovClick(e, id) { if (e.target===document.getElementById(id)) closeOv(id); }
+let _tt;
+function toast(msg, type='ok') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  clearTimeout(_tt); _tt = setTimeout(() => { t.className = `toast ${type}`; }, 2400);
+}
+
+// ── INIT ──
+function init() {
+  // Показати кешовані дані поки Firebase не відповів
+  load();
+  buildNav(); render();
+  // Показати індикатор синхронізації
+  toast('🔄 Підключення до хмари...', 'inf');
+}
+document.readyState==='loading' ? document.addEventListener('DOMContentLoaded',init) : init();
+</script>
+</body>
+</html>

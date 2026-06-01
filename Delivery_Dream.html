@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f0f4ff">
+<title>Delivery Dream</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import { getDatabase, ref, set, onValue, off }
+    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+  // ══════════════════════════════════════════════════
+  // 🔥 ВСТАВТЕ СВІЙ FIREBASE CONFIG НИЖЧЕ
+  // Отримати на: https://console.firebase.google.com
+  // Проект → Налаштування → Веб-додаток → firebaseConfig
+  // ══════════════════════════════════════════════════
+  const firebaseConfig = {
+    apiKey:            "AIzaSyDteADlex9-zcLsmSsCtMz_FwjKLPBBKUQ",
+    authDomain:        "myapp-91fed.firebaseapp.com",
+    databaseURL:       "https://myapp-91fed-default-rtdb.firebaseio.com",
+    projectId:         "myapp-91fed",
+    storageBucket:     "myapp-91fed.firebasestorage.app",
+    messagingSenderId: "351705572415",
+    appId:             "1:351705572415:web:6a860f0035286248a3448a"
+  };
+
+  const app  = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db   = getDatabase(app);
+  let _dbRef = null;
+
+  window._fbSave = function(data) {
+    if (!_dbRef) return;
+    set(_dbRef, data).catch(e => console.error('FB save:', e));
+  };
+
+  function subscribeData(uid) {
+    if (_dbRef) off(_dbRef);
+    _dbRef = ref(db, 'users/' + uid + '/delivery');
+    onValue(_dbRef, snap => {
+      const val = snap.val();
+      try { window._fbLoaded(val); } catch(e) { console.error('FB load:', e); }
+    });
+  }
+
+  onAuthStateChanged(auth, user => {
+    if (user) {
+      document.getElementById('fb-login-screen').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
+      document.getElementById('fb-user-name').textContent = user.displayName || user.email;
+      subscribeData(user.uid);
+    } else {
+      _dbRef = null;
+      document.getElementById('fb-login-screen').style.display = 'flex';
+      document.getElementById('app').style.display = 'none';
+    }
+  });
+
+  window._fbSignIn = async function() {
+    const btn = document.getElementById('fb-signin-btn');
+    btn.textContent = 'Вхід...'; btn.disabled = true;
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+    } catch(e) {
+      btn.textContent = '🔑 Увійти через Google';
+      btn.disabled = false;
+      alert('Помилка входу: ' + e.message);
+    }
+  };
+
+  window._fbSignOut = async function() {
+    if (!confirm('Вийти з акаунту?')) return;
+    await signOut(auth);
+  };
+</script>
+<style>
+:root{
+  --bg:#f0f4ff;--bg2:#ffffff;--bg3:#f5f8ff;--bg4:#e8eeff;
+  --brd:#dde5f5;--brd2:#c8d5ee;
+  --txt:#1a2540;--txt2:#2a3a5c;--txt3:#8fa0c0;
+  --up:#00a878;--up2:#007d5a;--up-dim:#00a87812;
+  --dn:#e8284a;--dn2:#b81e38;--dn-dim:#e8284a10;
+  --gold:#d4960a;--blue:#2e7ee8;--purple:#7c3aed;--cyan:#0891b2;
+  --r:12px;--r2:18px;
+  --glow:0 2px 16px rgba(46,126,232,.07);
+  --shadow:0 1px 4px rgba(26,37,64,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-font-smoothing:antialiased}
+html,body{height:100%;background:var(--bg);color:var(--txt);font-family:'Space Grotesk',sans-serif;overflow:hidden;font-size:16px}
+#app{display:flex;flex-direction:column;height:100dvh;max-width:430px;margin:0 auto;background:var(--bg);position:relative}
+
+/* ── HEADER ── */
+.hdr{flex-shrink:0;padding:13px 16px 11px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--brd2);background:var(--bg2);position:relative;overflow:hidden;box-shadow:var(--shadow)}
+.hdr::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--up),var(--blue))}
+.brand{font-family:'JetBrains Mono',monospace;font-size:19px;font-weight:700;letter-spacing:2px;background:linear-gradient(135deg,var(--up),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.brand-sub{font-size:10px;color:var(--txt3);letter-spacing:2px;margin-top:2px;font-family:'JetBrains Mono',monospace}
+.hdr-right{text-align:right;cursor:pointer}
+.hdr-val{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700;color:var(--txt)}
+.hdr-lbl{font-size:9px;color:var(--txt3);letter-spacing:1.5px;text-transform:uppercase;margin-top:2px}
+.hdr-chg{font-size:11px;font-weight:700;margin-top:2px;font-family:'JetBrains Mono',monospace}
+
+.page{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:13px 13px 6px}
+.page::-webkit-scrollbar{width:0}
+
+/* ── NAV ── */
+.bnav{flex-shrink:0;display:grid;grid-template-columns:repeat(3,1fr);background:var(--bg2);border-top:1px solid var(--brd2);padding-bottom:env(safe-area-inset-bottom,0);box-shadow:0 -1px 0 var(--brd2)}
+.nb{background:none;border:none;display:flex;flex-direction:column;align-items:center;padding:9px 0 8px;gap:3px;font-size:10px;font-weight:700;letter-spacing:.5px;cursor:pointer;color:var(--txt3);font-family:'Space Grotesk',sans-serif;transition:color .15s;text-transform:uppercase}
+.nb .ni{font-size:22px;line-height:1}
+.nb.on{color:var(--up)}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--brd2);border-radius:var(--r2);margin-bottom:11px;overflow:hidden;position:relative;box-shadow:var(--glow)}
+.cb{padding:14px 16px}
+.ct{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:11px;font-family:'JetBrains Mono',monospace}
+
+.sr{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--brd)}
+.sr:last-child{border-bottom:none}
+.sl{font-size:13px;color:var(--txt2)}
+.sv{font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--txt)}
+
+/* ── CHIPS ── */
+.chips{display:flex;gap:8px;margin-bottom:11px}
+.chip{flex:1;background:var(--bg2);border:1px solid var(--brd2);border-radius:13px;padding:10px 6px;text-align:center;box-shadow:var(--shadow)}
+.chip-v{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;line-height:1.2}
+.chip-l{font-size:10px;color:var(--txt3);letter-spacing:.8px;text-transform:uppercase;margin-top:3px}
+
+/* ── PROGRESS ── */
+.pt{background:var(--bg4);border-radius:4px;overflow:hidden;height:7px}
+.pf{height:100%;border-radius:4px;transition:width .5s ease}
+.pf-up{background:linear-gradient(90deg,var(--up2),var(--up))}
+.pf-dn{background:linear-gradient(90deg,var(--dn2),var(--dn))}
+.pf-gold{background:linear-gradient(90deg,#b07d00,var(--gold))}
+.pf-blue{background:linear-gradient(90deg,#1a5acc,var(--blue))}
+
+/* ── DAY ITEM ── */
+.di{background:var(--bg2);border:1px solid var(--brd2);border-radius:var(--r);padding:11px 13px;margin-bottom:7px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:all .12s;border-left:3px solid transparent;box-shadow:var(--shadow)}
+.di:active{opacity:.75;transform:scale(.99)}
+.di.pos{border-left-color:var(--up);background:#f0fdf8}
+.di.neg{border-left-color:var(--dn);background:#fff5f7}
+.di.zero{border-left-color:var(--txt3)}
+.di.today{border-color:var(--up);background:linear-gradient(135deg,#f0fdf8,#f0f8ff)}
+.di.future{opacity:.5}
+.di-num{width:30px;height:30px;border-radius:8px;background:var(--bg3);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--txt3);font-family:'JetBrains Mono',monospace;flex-shrink:0;border:1px solid var(--brd)}
+.di-num.today-n{background:var(--up-dim);color:var(--up);border:1px solid rgba(0,168,120,.3)}
+.di-body{flex:1;min-width:0}
+.di-date{font-size:13px;font-weight:700;color:var(--txt);font-family:'JetBrains Mono',monospace}
+.di-sub{font-size:11px;color:var(--txt3);margin-top:2px;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.di-right{text-align:right;flex-shrink:0}
+.di-pnl{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.di-pct{font-size:10px;margin-top:2px}
+
+/* ── GOAL BANNER ── */
+.goal-banner{background:linear-gradient(135deg,rgba(0,168,120,.08),rgba(46,126,232,.06));border:1px solid rgba(0,168,120,.25);border-radius:var(--r2);padding:15px 16px;margin-bottom:11px;position:relative;overflow:hidden}
+.goal-banner::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,var(--up),var(--blue))}
+.goal-reached{background:linear-gradient(135deg,rgba(0,168,120,.12),rgba(0,168,120,.06));border-color:var(--up);animation:pulse-glow 2s infinite}
+@keyframes pulse-glow{0%,100%{box-shadow:0 0 0 0 rgba(0,168,120,.15)}50%{box-shadow:0 0 20px 6px rgba(0,168,120,.1)}}
+
+/* ── WITHDRAWAL ITEM ── */
+.wd-item{background:var(--bg3);border:1px solid var(--brd);border-radius:10px;padding:11px 13px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+.wd-left{}
+.wd-date{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:700;color:var(--txt)}
+.wd-note{font-size:11px;color:var(--txt3);margin-top:2px}
+.wd-right{text-align:right}
+.wd-amt{font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700;color:var(--blue)}
+.wd-del{background:none;border:none;color:var(--dn);font-size:16px;cursor:pointer;padding:4px;line-height:1;margin-left:8px}
+
+/* ── OVERLAYS ── */
+.ov{position:fixed;inset:0;background:rgba(26,37,64,.5);display:flex;align-items:flex-end;justify-content:center;z-index:200;opacity:0;pointer-events:none;transition:opacity .2s;backdrop-filter:blur(8px)}
+.ov.open{opacity:1;pointer-events:all}
+.modal{background:var(--bg2);border-radius:22px 22px 0 0;width:100%;max-width:430px;border:1px solid var(--brd2);border-bottom:none;transform:translateY(28px);transition:transform .22s ease;max-height:92dvh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,16px)}
+.ov.open .modal{transform:translateY(0)}
+.mhandle{width:36px;height:4px;background:var(--brd2);border-radius:2px;margin:12px auto 0}
+.mhdr{padding:14px 18px 12px;border-bottom:1px solid var(--brd2)}
+.mt{font-size:17px;font-weight:700;letter-spacing:.3px;color:var(--txt)}
+.ms{font-size:12px;color:var(--txt3);margin-top:3px;font-family:'JetBrains Mono',monospace}
+.mbody{padding:14px 18px}
+.ml{font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--txt3);margin-bottom:7px;display:block;font-family:'JetBrains Mono',monospace}
+.ml:not(:first-child){margin-top:15px}
+.min{width:100%;background:var(--bg3);border:1.5px solid var(--brd2);border-radius:11px;padding:13px 14px;color:var(--txt);font-size:16px;font-weight:600;font-family:'Space Grotesk',sans-serif;outline:none;transition:border-color .2s}
+.min:focus{border-color:var(--up);background:#fff}
+.mbtns{display:flex;gap:8px;padding:10px 18px 11px;position:sticky;bottom:0;background:var(--bg2);border-top:1px solid var(--brd2)}
+.mbtn{flex:1;padding:14px;border:none;border-radius:13px;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;transition:opacity .12s}
+.mbtn:active{opacity:.8}
+.mbtn-ok{background:linear-gradient(135deg,var(--up),var(--up2));color:#fff}
+.mbtn-no{background:var(--bg4);color:var(--txt2);border:1px solid var(--brd2)}
+.del-btn{width:calc(100% - 36px);margin:0 18px 8px;padding:12px;background:transparent;color:var(--dn);border:1px solid rgba(232,40,74,.25);border-radius:12px;font-size:13px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer}
+
+/* ── PREVIEW BOX ── */
+.preview-box{background:var(--bg3);border-radius:10px;padding:11px 13px;margin:9px 0;font-family:'JetBrains Mono',monospace;font-size:13px;line-height:1.8;border:1px solid var(--brd)}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:75px;left:50%;transform:translateX(-50%) translateY(10px);padding:10px 22px;border-radius:18px;font-size:13px;font-weight:700;z-index:300;opacity:0;transition:all .2s;pointer-events:none;white-space:nowrap;font-family:'JetBrains Mono',monospace;box-shadow:0 4px 16px rgba(0,0,0,.15)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--up);color:#fff}
+.toast.err{background:var(--dn);color:#fff}
+.toast.inf{background:var(--txt);color:#fff}
+.toast.warn{background:var(--gold);color:#fff}
+
+.empty{text-align:center;padding:50px 20px;color:var(--txt3)}
+.empty-ico{font-size:46px;margin-bottom:12px;opacity:.4}
+.empty-txt{font-size:14px;line-height:1.7;font-weight:600}
+
+.btn-row{display:flex;gap:8px;margin-bottom:11px}
+.btn-sm{flex:1;padding:12px 8px;background:var(--bg2);border:1px solid var(--brd2);border-radius:12px;font-size:12px;font-weight:700;color:var(--txt2);cursor:pointer;font-family:'Space Grotesk',sans-serif;text-align:center;transition:all .15s;box-shadow:var(--shadow)}
+.btn-sm:active{opacity:.75}
+.btn-danger{color:var(--dn);border-color:rgba(232,40,74,.25)}
+.btn-export{color:var(--blue);border-color:rgba(46,126,232,.25)}
+.btn-withdraw{color:var(--blue);border-color:rgba(46,126,232,.3);background:#f0f6ff}
+
+@keyframes fu{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.fu{animation:fu .22s ease forwards}
+svg{display:block;overflow:visible}
+</style>
+</head>
+<body>
+<!-- ══ LOGIN SCREEN ══ -->
+<div id="fb-login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100dvh;background:var(--bg);padding:30px;text-align:center">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;background:linear-gradient(135deg,var(--up),var(--blue));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">Delivery Dream</div>
+  <div style="font-size:11px;color:var(--txt3);letter-spacing:2px;font-family:'JetBrains Mono',monospace;margin-bottom:40px">ЩОДЕННИК ДОСТАВКИ</div>
+  <div style="background:var(--bg2);border:1px solid var(--brd2);border-radius:20px;padding:28px 24px;width:100%;max-width:340px;box-shadow:var(--glow)">
+    <div style="font-size:32px;margin-bottom:12px">🚴</div>
+    <div style="font-size:15px;font-weight:700;color:var(--txt);margin-bottom:8px">Синхронізація між пристроями</div>
+    <div style="font-size:12px;color:var(--txt3);margin-bottom:24px;line-height:1.7">Ваші дані автоматично синхронізуються на ПК та телефоні через Google акаунт</div>
+    <button id="fb-signin-btn" onclick="_fbSignIn()" style="width:100%;padding:14px;background:linear-gradient(135deg,var(--up),var(--up2));color:#fff;border:none;border-radius:13px;font-size:14px;font-weight:700;font-family:'Space Grotesk',sans-serif;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+      <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#fff" d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"/><path fill="#fff" d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"/><path fill="#fff" d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"/><path fill="#fff" d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 6.293C4.672 4.166 6.656 3.58 9 3.58z"/></svg>
+      🔑 Увійти через Google
+    </button>
+  </div>
+  <div style="margin-top:20px;font-size:10px;color:var(--txt3);line-height:1.7">Дані зберігаються у вашому особистому Firebase.<br>Ніхто крім вас не має доступу.</div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="hdr">
+    <div>
+      <div class="brand">Delivery</div>
+      <div class="brand-sub">ЩОДЕННИК ДОСТАВКИ · ГРН</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+      <div class="hdr-right" onclick="openSettings()">
+        <div class="hdr-val" id="hdr-val">—</div>
+        <div class="hdr-lbl" id="hdr-lbl">Накопичено</div>
+        <div class="hdr-chg" id="hdr-chg"></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <span id="fb-user-name" style="font-size:9px;color:var(--txt3);font-family:'JetBrains Mono',monospace;max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+        <button onclick="_fbSignOut()" style="background:none;border:none;font-size:9px;color:var(--txt3);cursor:pointer;padding:2px 5px;border-radius:5px;border:1px solid var(--brd2)">Вийти</button>
+      </div>
+    </div>
+  </div>
+  <div class="page" id="page"></div>
+  <div class="bnav" id="bnav"></div>
+</div>
+
+<!-- ══ DAY MODAL ══ -->
+<div class="ov" id="ov-day" onclick="ovClick(event,'ov-day')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr">
+    <div class="mt" id="dm-title">День</div>
+    <div class="ms" id="dm-sub"></div>
+  </div>
+  <div class="mbody">
+    <span class="ml">Заробив сьогодні (грн)</span>
+    <input class="min" id="dm-earned" type="number" inputmode="decimal" placeholder="напр: 350" oninput="dmPreview()">
+    <span class="ml">Дод. витрати (грн)</span>
+    <input class="min" id="dm-expense" type="number" inputmode="decimal" placeholder="0" oninput="dmPreview()">
+    <span class="ml">Нотатка (необов'язково)</span>
+    <input class="min" id="dm-note" type="text" placeholder="Що їздив...">
+    <div id="dm-preview" class="preview-box" style="display:none;margin-top:12px"></div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-day')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="saveDay()">💾 Зберегти</button>
+  </div>
+  <div style="padding:0 18px 8px">
+    <button class="del-btn" id="dm-del-btn" onclick="clearDay()" style="display:none">🗑 Очистити день</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ WITHDRAWAL MODAL ══ -->
+<div class="ov" id="ov-withdraw" onclick="ovClick(event,'ov-withdraw')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr">
+    <div class="mt">💸 Вивести кошти</div>
+    <div class="ms" id="wm-sub">Доступно: 0 грн</div>
+  </div>
+  <div class="mbody">
+    <span class="ml">Сума виводу (грн)</span>
+    <input class="min" id="wm-amount" type="number" inputmode="decimal" placeholder="напр: 1000" oninput="wmPreview()">
+    <span class="ml">Нотатка (куди)</span>
+    <input class="min" id="wm-note" type="text" placeholder="напр: на карту, на їжу...">
+    <div id="wm-preview" class="preview-box" style="display:none;margin-top:12px"></div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-withdraw')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="saveWithdrawal()">💸 Вивести</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ SETTINGS MODAL ══ -->
+<div class="ov" id="ov-sett" onclick="ovClick(event,'ov-sett')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt">⚙️ Налаштування</div><div class="ms">Всі суми в гривнях (грн)</div></div>
+  <div class="mbody">
+    <span class="ml">Дата початку</span>
+    <input class="min" id="s-startdate" type="date">
+    <span class="ml">Ціль (грн)</span>
+    <input class="min" id="s-goal" type="number" inputmode="decimal" placeholder="7000">
+    <span class="ml">Кількість днів</span>
+    <input class="min" id="s-days" type="number" inputmode="numeric" placeholder="365">
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-sett')">Скасувати</button>
+    <button class="mbtn mbtn-ok" onclick="saveSettings()">✅ Зберегти</button>
+  </div>
+</div>
+</div>
+
+<!-- ══ RESET CONFIRM ══ -->
+<div class="ov" id="ov-reset" onclick="ovClick(event,'ov-reset')">
+<div class="modal">
+  <div class="mhandle"></div>
+  <div class="mhdr"><div class="mt" style="color:var(--dn)">⚠️ Скинути все?</div><div class="ms">Видалить всі дані та записи</div></div>
+  <div class="mbody">
+    <div style="background:var(--dn-dim);border:1px solid rgba(232,40,74,.15);border-radius:12px;padding:14px;font-size:14px;color:var(--txt2);line-height:1.9">
+      ✗ Всі записані дні<br>✗ Всі виводи<br>✗ Вся аналітика<br>✗ Налаштування
+    </div>
+  </div>
+  <div class="mbtns">
+    <button class="mbtn mbtn-no" onclick="closeOv('ov-reset')">Скасувати</button>
+    <button class="mbtn" style="background:var(--dn);color:#fff" onclick="doReset()">Скинути</button>
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const SK = 'delivery_dream_v2';
+const DN = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
+
+const DEF = {
+  tab: 0,
+  cfg: { startDate: '', goal: 7000, totalDays: 365 },
+  days: [],
+  withdrawals: []
+};
+
+let S = clone(DEF);
+let _openDate = null;
+
+function load() {
+  // Локальний кеш поки Firebase не відповів
+  let raw = null;
+  try { raw = localStorage.getItem(SK); } catch {}
+  try { S = raw ? JSON.parse(raw) : clone(DEF); } catch { S = clone(DEF); }
+  if (!S.cfg) S.cfg = clone(DEF.cfg);
+  if (!S.days) S.days = [];
+  if (!S.withdrawals) S.withdrawals = [];
+  if (S.tab == null) S.tab = 0;
+}
+function save() {
+  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) {}
+  // Синхронізація з Firebase
+  if (window._fbSave) window._fbSave(S);
+}
+
+// Firebase callback
+window._fbLoaded = function(data) {
+  if (data) {
+    try {
+      S = data;
+      if (!S.cfg) S.cfg = clone(DEF.cfg);
+      if (!S.days) S.days = [];
+      if (!S.withdrawals) S.withdrawals = [];
+      if (S.tab == null) S.tab = 0;
+      try { localStorage.setItem(SK, JSON.stringify(S)); } catch {}
+    } catch(e) { S = clone(DEF); }
+  } else {
+    S = clone(DEF);
+  }
+  buildNav(); render();
+};
+function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+// ── UTILS ──
+const f = (v, d=0) => { if (v==null||isNaN(v)) return '—'; return (+v).toFixed(d); };
+const sg = v => v>0?'+':v<0?'-':'';
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+};
+function fmtDate(str) {
+  const d = new Date(str+'T00:00:00');
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')} ${DN[d.getDay()]}`;
+}
+function addDays(str, n) {
+  const d = new Date(str+'T00:00:00'); d.setDate(d.getDate()+n);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function getDay(str) { return S.days.find(d => d.date === str) || null; }
+
+// ── CALC ──
+function dailyNorm() {
+  const { goal, totalDays } = S.cfg;
+  if (!goal || !totalDays) return 0;
+  return goal / totalDays;
+}
+function totalEarned() {
+  return S.days.reduce((s, d) => s + (d.earned || 0), 0);
+}
+function totalExpenses() {
+  return S.days.reduce((s, d) => s + (d.expense || 0), 0);
+}
+function totalWithdrawn() {
+  return (S.withdrawals || []).reduce((s, w) => s + (w.amount || 0), 0);
+}
+function netEarned() {
+  return totalEarned() - totalExpenses();
+}
+function availableBalance() {
+  // earned - expenses - already withdrawn
+  return Math.max(netEarned() - totalWithdrawn(), 0);
+}
+function workedDays() {
+  return S.days.filter(d => d.earned > 0).length;
+}
+function buildDaysList() {
+  const total = S.cfg.totalDays || 365;
+  const start = S.cfg.startDate || todayStr();
+  const list = [];
+  for (let i = 0; i < total; i++) list.push(addDays(start, i));
+  return list;
+}
+
+// ── HEADER ──
+function updHdr() {
+  const earned = totalEarned();
+  const goal = S.cfg.goal || 7000;
+  const tdStr = todayStr();
+  const todayDay = getDay(tdStr);
+  const todayEarned = todayDay ? (todayDay.earned || 0) : 0;
+  document.getElementById('hdr-val').textContent = `${f(earned)} грн`;
+  document.getElementById('hdr-lbl').textContent = `з ${f(goal)} грн`;
+  const el = document.getElementById('hdr-chg');
+  if (todayEarned > 0) {
+    el.textContent = `+${f(todayEarned)} грн сьогодні`;
+    el.style.color = 'var(--up)';
+  } else { el.textContent = ''; }
+}
+
+// ── NAV ──
+const TABS = [{ico:'📅',lbl:'Дні'},{ico:'📊',lbl:'Аналіз'},{ico:'⚙️',lbl:'Нал.'}];
+function buildNav() {
+  document.getElementById('bnav').innerHTML = TABS.map((t,i) =>
+    `<button class="nb${i===S.tab?' on':''}" onclick="setTab(${i})"><span class="ni">${t.ico}</span>${t.lbl}</button>`
+  ).join('');
+}
+function setTab(t) { S.tab=t; save(); buildNav(); render(); }
+
+// ── RENDER ROUTER ──
+function render() {
+  updHdr();
+  const p = document.getElementById('page');
+  try {
+    let h = '';
+    if (S.tab===0) h = renderDays();
+    else if (S.tab===1) h = renderAnalytics();
+    else h = renderSettings();
+    p.innerHTML = `<div class="fu">${h}</div>`;
+  } catch(e) {
+    p.innerHTML = `<div style="padding:20px;color:var(--dn);font-size:13px;font-family:'JetBrains Mono',monospace">Помилка: ${e.message}<br><br><button onclick="localStorage.clear();location.reload()" style="background:var(--dn);color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">СКИНУТИ</button></div>`;
+  }
+}
+
+// ── TAB 0: DAYS ──
+function renderDays() {
+  const { goal } = S.cfg;
+  const earned = totalEarned();
+  const withdrawn = totalWithdrawn();
+  const available = availableBalance();
+  const prog = goal > 0 ? Math.min(earned / goal, 1) : 0;
+  const allDates = buildDaysList();
+  const tdStr = todayStr();
+
+  let banner = '';
+  if (goal > 0 && earned >= goal) {
+    banner = `<div class="goal-banner goal-reached">
+      <div style="font-size:22px;margin-bottom:6px">🏆</div>
+      <div style="font-size:16px;font-weight:700;color:var(--up)">Ціль досягнута!</div>
+      <div style="font-size:12px;color:var(--txt2);margin-top:4px">${f(earned)} грн ≥ ціль ${f(goal)} грн</div>
+    </div>`;
+  }
+
+  const topCard = `<div class="card"><div class="cb">
+    <div class="ct">Прогрес до цілі</div>
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--up)">${f(earned)} грн</span>
+      <span style="font-size:12px;color:var(--txt3)">з ${f(goal)} грн</span>
+    </div>
+    <div class="pt"><div class="pf pf-up" style="width:${(prog*100).toFixed(1)}%"></div></div>
+    <div style="display:flex;justify-content:space-between;margin-top:6px">
+      <span style="font-size:11px;color:var(--txt3)">${(prog*100).toFixed(1)}%</span>
+      <span style="font-size:11px;color:var(--txt3)">Залишилось: ${goal>earned?`${f(goal-earned)} грн`:'✅'}</span>
+    </div>
+    ${withdrawn > 0 ? `<div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--brd);display:flex;justify-content:space-between">
+      <span style="font-size:12px;color:var(--txt3)">💸 Виведено</span>
+      <span style="font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--blue)">${f(withdrawn)} грн</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px">
+      <span style="font-size:12px;color:var(--txt3)">✅ Доступно зараз</span>
+      <span style="font-size:12px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--up)">${f(available)} грн</span>
+    </div>` : ''}
+  </div></div>`;
+
+  const wd = workedDays();
+  const avg = wd > 0 ? earned / wd : 0;
+  const norm = dailyNorm();
+  const chips = `<div class="chips">
+    <div class="chip"><div class="chip-v" style="color:var(--up)">${wd}</div><div class="chip-l">Відпрац.</div></div>
+    <div class="chip"><div class="chip-v" style="color:var(--gold)">${f(avg)}</div><div class="chip-l">Сер/день</div></div>
+    <div class="chip"><div class="chip-v" style="color:var(--blue)">${f(available)}</div><div class="chip-l">Доступно</div></div>
+  </div>`;
+
+  // Withdraw button
+  const wdBtn = `<div class="btn-row">
+    <button class="btn-sm btn-withdraw" onclick="openWithdraw()">💸 Вивести кошти</button>
+    <button class="btn-sm btn-export" onclick="exportCSV()">📤 Експорт</button>
+  </div>`;
+
+  let daysList = '';
+  allDates.forEach((date, i) => {
+    const day = getDay(date);
+    const isTd = date === tdStr;
+    const isFuture = date > tdStr;
+    const dayEarned = day ? (day.earned || 0) : 0;
+    const dayNet = day ? dayEarned - (day.expense||0) : 0;
+
+    let cls = 'di';
+    if (day && dayEarned >= norm) cls += ' pos';
+    else if (day && dayEarned > 0 && dayEarned < norm) cls += ' neg';
+    else if (day && dayEarned > 0) cls += ' zero';
+    if (isTd) cls += ' today';
+    if (isFuture) cls += ' future';
+
+    const numCls = isTd ? 'di-num today-n' : 'di-num';
+    const earnColor = !day || dayEarned === 0 ? 'var(--txt3)' : dayEarned >= norm ? 'var(--up)' : 'var(--dn)';
+
+    let subHtml = '';
+    if (!isFuture && !day) {
+      subHtml = `<span style="color:var(--gold);font-size:11px">Ціль дня: ${f(norm,1)} грн</span>`;
+    } else if (day && dayEarned > 0) {
+      const diff = dayEarned - norm;
+      const diffColor = diff >= 0 ? 'var(--up)' : 'var(--dn)';
+      subHtml = `<span style="color:${diffColor};font-size:11px">${sg(diff)}${f(Math.abs(diff),1)} від норми</span>`;
+      if (day.note) subHtml += `<span style="font-size:11px;color:var(--txt3)">· ${day.note}</span>`;
+    } else if (isFuture) {
+      const nwb = normWithBacklogForDay(i);
+      subHtml = `<span style="font-size:11px;color:var(--txt3)">Норма: ~${f(nwb,1)} грн</span>`;
+    }
+
+    let rightContent = '';
+    if (day && day.earned > 0) {
+      rightContent = `<div class="di-pnl" style="color:${earnColor}">${f(dayEarned)} грн</div>`;
+      if ((day.expense||0) > 0) {
+        rightContent += `<div class="di-pct" style="color:var(--txt3)">чист: ${f(dayNet)} грн</div>`;
+      }
+    } else if (!isFuture) {
+      rightContent = `<div class="di-pnl" style="color:var(--txt3)">—</div>`;
+    }
+
+    daysList += `<div class="${cls}" onclick="openDay('${date}')">
+      <div class="${numCls}">${i+1}</div>
+      <div class="di-body">
+        <div class="di-date">${fmtDate(date)}${isTd?' · Сьогодні':''}</div>
+        <div class="di-sub">${subHtml}</div>
+      </div>
+      <div class="di-right">${rightContent}</div>
+    </div>`;
+  });
+
+  const bottomRow = `<div class="btn-row" style="margin-top:4px">
+    <button class="btn-sm btn-danger" onclick="openReset()">🗑 Скинути все</button>
+  </div>`;
+
+  if (!S.cfg.startDate) {
+    return `<div class="empty"><div class="empty-ico">🚗</div><div class="empty-txt">Спочатку налаштуй<br>дату початку в ⚙️ Нал.</div></div>`;
+  }
+
+  return banner + topCard + chips + wdBtn + daysList + bottomRow;
+}
+
+function normWithBacklogForDay(dayIdx) {
+  const { goal, totalDays } = S.cfg;
+  const allDates = buildDaysList();
+  let earnedSoFar = 0;
+  for (let i = 0; i < dayIdx; i++) {
+    const d = getDay(allDates[i]);
+    if (d) earnedSoFar += (d.earned || 0);
+  }
+  const remaining = Math.max(goal - earnedSoFar, 0);
+  const daysLeft = Math.max(totalDays - dayIdx, 1);
+  return remaining / daysLeft;
+}
+
+// ── TAB 1: ANALYTICS ──
+function renderAnalytics() {
+  const allDates = buildDaysList();
+  const filled = allDates.filter(d => { const day=getDay(d); return day && day.earned > 0; });
+  if (!filled.length) {
+    return `<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Ще немає даних<br>Заповни кілька днів</div></div>`;
+  }
+
+  const earned = totalEarned();
+  const net = netEarned();
+  const expenses = totalExpenses();
+  const withdrawn = totalWithdrawn();
+  const available = availableBalance();
+  const wd = workedDays();
+  const avg = wd > 0 ? earned / wd : 0;
+  const norm = dailyNorm();
+  const winDays = filled.filter(d => { const day=getDay(d); return (day.earned||0) >= norm; }).length;
+  const lossDays = wd - winDays;
+
+  let best=null, worst=null, bestV=-Infinity, worstV=Infinity;
+  filled.forEach(d => {
+    const day=getDay(d); const v=day.earned||0;
+    if (v>bestV){bestV=v;best=d;}
+    if (v<worstV){worstV=v;worst=d;}
+  });
+
+  // Equity chart
+  let cumul = 0;
+  const equityData = allDates.map(d => {
+    const day=getDay(d);
+    if (day) cumul += (day.earned||0);
+    return cumul;
+  });
+  const goalLine = S.cfg.goal || 7000;
+  const maxV = Math.max(...equityData, goalLine, 1);
+  const W=340, H=110;
+  const pts = equityData.map((v,i) => {
+    const x=(i/(equityData.length-1||1))*W;
+    const y=H-(v/maxV)*H;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  const goalY = H-(goalLine/maxV)*H;
+
+  const chart = `<div class="card"><div class="cb">
+    <div class="ct">Крива накопичення</div>
+    <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}" style="margin:4px 0 0">
+      <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#00a878" stop-opacity=".2"/><stop offset="100%" stop-color="#00a878" stop-opacity="0"/></linearGradient></defs>
+      <line x1="0" y1="${goalY.toFixed(1)}" x2="${W}" y2="${goalY.toFixed(1)}" stroke="rgba(212,150,10,.4)" stroke-width="1.5" stroke-dasharray="5,4"/>
+      <text x="3" y="${(goalY-4).toFixed(1)}" fill="var(--gold)" font-size="9" font-family="JetBrains Mono,monospace" font-weight="700">ЦІЛЬ</text>
+      <polyline points="0,${H} ${pts} ${W},${H}" fill="url(#eg)" stroke="none"/>
+      <polyline points="${pts}" fill="none" stroke="var(--up)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+  </div></div>`;
+
+  const statsCard = `<div class="card"><div class="cb">
+    <div class="ct">Загальна статистика</div>
+    <div class="sr"><span class="sl">💰 Всього зароблено</span><span class="sv" style="color:var(--up)">${f(earned)} грн</span></div>
+    <div class="sr"><span class="sl">🧾 Витрати</span><span class="sv" style="color:var(--dn)">-${f(expenses)} грн</span></div>
+    <div class="sr"><span class="sl">✅ Чистий дохід</span><span class="sv" style="color:var(--up)">${f(net)} грн</span></div>
+    <div class="sr"><span class="sl">💸 Виведено</span><span class="sv" style="color:var(--blue)">${f(withdrawn)} грн</span></div>
+    <div class="sr"><span class="sl">💼 Доступно зараз</span><span class="sv" style="color:var(--up)">${f(available)} грн</span></div>
+    <div class="sr"><span class="sl">📅 Днів відпрацьовано</span><span class="sv">${wd}</span></div>
+    <div class="sr"><span class="sl">📈 Середній день</span><span class="sv">${f(avg)} грн</span></div>
+    <div class="sr"><span class="sl">🎯 Норма/день</span><span class="sv">${f(norm,1)} грн</span></div>
+    <div class="sr"><span class="sl">✅ Вище норми</span><span class="sv" style="color:var(--up)">${winDays} дн</span></div>
+    <div class="sr"><span class="sl">❌ Нижче норми</span><span class="sv" style="color:var(--dn)">${lossDays} дн</span></div>
+    ${best?`<div class="sr"><span class="sl">🏆 Найкращий день</span><span class="sv" style="color:var(--up)">${fmtDate(best)}: ${f(bestV)} грн</span></div>`:''}
+    ${worst&&worstV!==bestV?`<div class="sr"><span class="sl">📉 Найгірший день</span><span class="sv" style="color:var(--dn)">${fmtDate(worst)}: ${f(worstV)} грн</span></div>`:''}
+  </div></div>`;
+
+  // Withdrawals history
+  const wds = S.withdrawals || [];
+  let wdCard = '';
+  if (wds.length) {
+    const wdItems = [...wds].reverse().map((w,i) => {
+      const realIdx = wds.length-1-i;
+      return `<div class="wd-item">
+        <div class="wd-left">
+          <div class="wd-date">${fmtDate(w.date)}</div>
+          ${w.note?`<div class="wd-note">${w.note}</div>`:''}
+        </div>
+        <div class="wd-right" style="display:flex;align-items:center">
+          <div class="wd-amt">-${f(w.amount)} грн</div>
+          <button class="wd-del" onclick="deleteWithdrawal(${realIdx})">✕</button>
+        </div>
+      </div>`;
+    }).join('');
+    wdCard = `<div class="card"><div class="cb"><div class="ct">Історія виводів</div>${wdItems}</div></div>`;
+  }
+
+  // By months
+  const monthMap = {};
+  filled.forEach(d => {
+    const m=d.substring(0,7); const day=getDay(d);
+    monthMap[m]=(monthMap[m]||0)+(day.earned||0);
+  });
+  const months = Object.entries(monthMap).sort((a,b)=>a[0].localeCompare(b[0]));
+  const maxMonth = Math.max(...months.map(m=>m[1]),1);
+  const MNAMES=['','Січ','Лют','Бер','Кві','Тра','Чер','Лип','Сер','Вер','Жов','Лис','Гру'];
+  const monthBars = months.map(([m,v]) => {
+    const mn=parseInt(m.split('-')[1]);
+    return `<div style="margin-bottom:9px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600">${MNAMES[mn]}</span>
+        <span style="font-size:12px;color:var(--up);font-family:'JetBrains Mono',monospace;font-weight:700">${f(v)} грн</span>
+      </div>
+      <div class="pt"><div class="pf pf-up" style="width:${(v/maxMonth*100).toFixed(0)}%"></div></div>
+    </div>`;
+  }).join('');
+  const monthCard = months.length>1 ? `<div class="card"><div class="cb"><div class="ct">По місяцях</div>${monthBars}</div></div>` : '';
+
+  return chart + statsCard + wdCard + monthCard;
+}
+
+// ── TAB 2: SETTINGS ──
+function renderSettings() {
+  const { startDate, goal, totalDays } = S.cfg;
+  return `<div class="card"><div class="cb">
+    <div class="ct">Поточні налаштування</div>
+    <div class="sr"><span class="sl">📅 Дата початку</span><span class="sv">${startDate?fmtDate(startDate):'—'}</span></div>
+    <div class="sr"><span class="sl">🎯 Ціль</span><span class="sv">${f(goal)} грн</span></div>
+    <div class="sr"><span class="sl">📆 Кількість днів</span><span class="sv">${totalDays}</span></div>
+    <div class="sr"><span class="sl">📊 Норма/день</span><span class="sv">${f(dailyNorm(),1)} грн</span></div>
+  </div></div>
+  <div class="btn-row">
+    <button class="btn-sm" style="color:var(--up);border-color:rgba(0,168,120,.3)" onclick="openSettings()">✏️ Редагувати</button>
+    <button class="btn-sm btn-export" onclick="exportCSV()">📤 Експорт CSV</button>
+  </div>
+  <div class="btn-row">
+    <button class="btn-sm btn-danger" onclick="openReset()">🗑 Скинути все</button>
+  </div>`;
+}
+
+// ── DAY MODAL ──
+function openDay(date) {
+  _openDate = date;
+  const day = getDay(date);
+  document.getElementById('dm-title').textContent = fmtDate(date) + (date===todayStr()?' · Сьогодні':'');
+  document.getElementById('dm-sub').textContent = `Норма: ${f(dailyNorm(),1)} грн/день`;
+  document.getElementById('dm-earned').value = day ? (day.earned||'') : '';
+  document.getElementById('dm-expense').value = day ? (day.expense||'') : '';
+  document.getElementById('dm-note').value = day ? (day.note||'') : '';
+  document.getElementById('dm-del-btn').style.display = day ? 'block' : 'none';
+  dmPreview();
+  document.getElementById('ov-day').classList.add('open');
+}
+function dmPreview() {
+  const earned = parseFloat(document.getElementById('dm-earned').value)||0;
+  const expense = parseFloat(document.getElementById('dm-expense').value)||0;
+  const prev = document.getElementById('dm-preview');
+  if (!earned) { prev.style.display='none'; return; }
+  const norm = dailyNorm();
+  const diff = earned - norm;
+  const net = earned - expense;
+  prev.style.display = 'block';
+  prev.innerHTML = `<span style="color:var(--up);font-weight:700">+${f(earned)} грн</span> заробив<br>
+<span style="color:${diff>=0?'var(--up)':'var(--dn)'}">${sg(diff)}${f(Math.abs(diff),1)} грн</span> від норми (${f(norm,1)} грн)${expense>0?`<br><span style="color:var(--dn)">-${f(expense)} грн</span> витрати → чистий: <span style="color:var(--up);font-weight:700">${f(net)} грн</span>`:''}`;
+}
+function saveDay() {
+  const date = _openDate; if (!date) return;
+  const earned = parseFloat(document.getElementById('dm-earned').value)||0;
+  const expense = parseFloat(document.getElementById('dm-expense').value)||0;
+  const note = document.getElementById('dm-note').value.trim();
+  const idx = S.days.findIndex(d=>d.date===date);
+  const rec = { date, earned, expense, note };
+  if (idx>=0) S.days[idx]=rec; else S.days.push(rec);
+  save(); render(); closeOv('ov-day');
+  toast(`Збережено: +${f(earned)} грн`, 'ok');
+}
+function clearDay() {
+  const date = _openDate; if (!date) return;
+  S.days = S.days.filter(d=>d.date!==date);
+  save(); render(); closeOv('ov-day');
+  toast('День очищено', 'inf');
+}
+
+// ── WITHDRAWAL ──
+function openWithdraw() {
+  const available = availableBalance();
+  document.getElementById('wm-sub').textContent = `Доступно: ${f(available)} грн`;
+  document.getElementById('wm-amount').value = '';
+  document.getElementById('wm-note').value = '';
+  document.getElementById('wm-preview').style.display = 'none';
+  document.getElementById('ov-withdraw').classList.add('open');
+}
+function wmPreview() {
+  const amount = parseFloat(document.getElementById('wm-amount').value)||0;
+  const available = availableBalance();
+  const prev = document.getElementById('wm-preview');
+  if (!amount) { prev.style.display='none'; return; }
+  prev.style.display='block';
+  const after = available - amount;
+  const ok = amount <= available;
+  prev.innerHTML = `${ok?'✅':'⚠️'} Вивести: <span style="color:var(--blue);font-weight:700">${f(amount)} грн</span><br>
+Залишок після: <span style="color:${after>=0?'var(--up)':'var(--dn)'};font-weight:700">${f(Math.max(after,0))} грн</span>${!ok?'<br><span style="color:var(--dn)">⚠️ Недостатньо коштів!</span>':''}`;
+}
+function saveWithdrawal() {
+  const amount = parseFloat(document.getElementById('wm-amount').value)||0;
+  if (!amount || amount <= 0) { toast('Введи суму', 'err'); return; }
+  const available = availableBalance();
+  if (amount > available) { toast(`Недостатньо! Доступно: ${f(available)} грн`, 'err'); return; }
+  const note = document.getElementById('wm-note').value.trim();
+  if (!S.withdrawals) S.withdrawals = [];
+  S.withdrawals.push({ date: todayStr(), amount, note });
+  save(); render(); closeOv('ov-withdraw');
+  toast(`Виведено: ${f(amount)} грн`, 'ok');
+}
+function deleteWithdrawal(idx) {
+  if (!confirm('Видалити цей вивід?')) return;
+  S.withdrawals.splice(idx, 1);
+  save(); render();
+  toast('Вивід видалено', 'inf');
+}
+
+// ── SETTINGS ──
+function openSettings() {
+  const { startDate, goal, totalDays } = S.cfg;
+  document.getElementById('s-startdate').value = startDate||'';
+  document.getElementById('s-goal').value = goal||7000;
+  document.getElementById('s-days').value = totalDays||365;
+  document.getElementById('ov-sett').classList.add('open');
+}
+function saveSettings() {
+  const startDate = document.getElementById('s-startdate').value;
+  const goal = parseFloat(document.getElementById('s-goal').value)||7000;
+  const totalDays = parseInt(document.getElementById('s-days').value)||365;
+  S.cfg = { ...S.cfg, startDate, goal, totalDays };
+  save(); render(); closeOv('ov-sett');
+  toast('Налаштування збережено ✓', 'ok');
+}
+
+// ── EXPORT CSV ──
+function exportCSV() {
+  const rows = [['Дата','Заробив (грн)','Витрати (грн)','Чистий (грн)','Нотатка']];
+  buildDaysList().forEach(date => {
+    const d=getDay(date);
+    if (d&&d.earned>0) rows.push([date,d.earned||0,d.expense||0,(d.earned||0)-(d.expense||0),d.note||'']);
+  });
+  if (S.withdrawals && S.withdrawals.length) {
+    rows.push([]);
+    rows.push(['== ВИВОДИ ==']);
+    rows.push(['Дата','Сума (грн)','Нотатка']);
+    S.withdrawals.forEach(w=>rows.push([w.date,w.amount,w.note||'']));
+  }
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob);
+  a.download=`delivery_${todayStr()}.csv`; a.click();
+  toast('CSV експортовано ✓', 'ok');
+}
+
+// ── RESET ──
+function openReset() { document.getElementById('ov-reset').classList.add('open'); }
+function doReset() { S=clone(DEF); save(); render(); closeOv('ov-reset'); toast('Дані скинуто','inf'); }
+
+// ── OVERLAY / TOAST ──
+function closeOv(id) { document.getElementById(id).classList.remove('open'); }
+function ovClick(e,id) { if (e.target===document.getElementById(id)) closeOv(id); }
+let _tt;
+function toast(msg,type='ok') {
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.className=`toast ${type} show`;
+  clearTimeout(_tt); _tt=setTimeout(()=>{t.className=`toast ${type}`;},2400);
+}
+
+// ── INIT ──
+function init() {
+  load(); buildNav(); render();
+  toast('🔄 Підключення до хмари...', 'inf');
+}
+document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();
+</script>
+</body>
+</html>
