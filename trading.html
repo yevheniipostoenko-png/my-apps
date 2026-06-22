@@ -778,10 +778,8 @@ function renderDays() {
     }
 
     let needHtml = '';
-    if (!isFuture && needed > 0) {
-      const depB = depBeforeDate(date);
+    if (needed > 0) {
       if (day && day.sessions && day.sessions.length) {
-        // show how much done vs target
         const done = dayPnl(day);
         const left = needed - done;
         if (left > 0.01) {
