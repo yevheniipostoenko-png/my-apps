@@ -783,12 +783,12 @@ function renderDays() {
         const done = dayPnl(day);
         const left = needed - done;
         if (left > 0.01) {
-          needHtml = `<span style="color:var(--gold);font-size:9px">До цілі дня: +$${f(left,1)}</span>`;
+          needHtml = `<span style="color:var(--gold);font-size:11px;font-weight:700">До цілі дня: +$${f(left,1)}</span>`;
         } else {
-          needHtml = `<span style="color:var(--up);font-size:9px">✅ Ціль дня виконана</span>`;
+          needHtml = `<span style="color:var(--up);font-size:11px;font-weight:700">✅ Ціль дня виконана</span>`;
         }
       } else {
-        needHtml = `<span style="color:var(--gold);font-size:9px">Ціль дня: +$${f(needed,1)} (${S.cfg.dailyPct}%)</span>`;
+        needHtml = `<span style="color:var(--gold);font-size:11px;font-weight:700">Ціль дня: +$${f(needed,1)} (${S.cfg.dailyPct}%)</span>`;
       }
     }
 
