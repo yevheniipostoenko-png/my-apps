@@ -2,907 +2,799 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#0e0f14">
-<title>Delivery Dream</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getDatabase, ref, set, onValue, off }
-    from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
-
-  const firebaseConfig = {
-    apiKey:            "AIzaSyDteADlex9-zcLsmSsCtMz_FwjKLPBBKUQ",
-    authDomain:        "myapp-91fed.firebaseapp.com",
-    databaseURL:       "https://myapp-91fed-default-rtdb.firebaseio.com",
-    projectId:         "myapp-91fed",
-    storageBucket:     "myapp-91fed.firebasestorage.app",
-    messagingSenderId: "351705572415",
-    appId:             "1:351705572415:web:6a860f0035286248a3448a"
-  };
-
-  const app  = initializeApp(firebaseConfig);
-  const auth = getAuth(app);
-  const db   = getDatabase(app);
-  let _dbRef = null;
-
-  window._fbSave = function(data) {
-    if (!_dbRef) return;
-    set(_dbRef, data).catch(e => console.error('FB save:', e));
-  };
-
-  function subscribeData(uid) {
-    if (_dbRef) off(_dbRef);
-    _dbRef = ref(db, 'users/' + uid + '/delivery_v3');
-    onValue(_dbRef, snap => {
-      const val = snap.val();
-      try { window._fbLoaded(val); } catch(e) { console.error('FB load:', e); }
-    });
-  }
-
-  onAuthStateChanged(auth, user => {
-    if (user) {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
-      document.getElementById('user-name').textContent = user.displayName || user.email;
-      subscribeData(user.uid);
-    } else {
-      _dbRef = null;
-      document.getElementById('login-screen').style.display = 'flex';
-      document.getElementById('app').style.display = 'none';
-    }
-  });
-
-  window._fbSignIn = async function() {
-    const btn = document.getElementById('signin-btn');
-    btn.textContent = 'Вхід...'; btn.disabled = true;
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-    } catch(e) {
-      btn.textContent = '🔑 Увійти через Google';
-      btn.disabled = false;
-      alert('Помилка входу: ' + e.message);
-    }
-  };
-
-  window._fbSignOut = async function() {
-    if (!confirm('Вийти з акаунту?')) return;
-    await signOut(auth);
-  };
-</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Delivery Dream v4</title>
 <style>
-:root {
-  --bg:    #0e0f14;
-  --bg2:   #15161e;
-  --bg3:   #1c1d28;
-  --bg4:   #22243200;
-  --brd:   #2a2c3e;
-  --brd2:  #333550;
-  --txt:   #e8eaf6;
-  --txt2:  #9ea3c0;
-  --txt3:  #5a5f7a;
+  :root {
+    --bg: #0e0f13;
+    --surface: #181920;
+    --surface2: #1f2130;
+    --border: #2a2d3e;
+    --text: #e8eaf0;
+    --muted: #6b7090;
+    --green: #4ade80;
+    --green-dim: #22c55e33;
+    --yellow: #facc15;
+    --yellow-dim: #eab30833;
+    --red: #f87171;
+    --red-dim: #ef444433;
+    --blue: #60a5fa;
+    --purple: #a78bfa;
+    --orange: #fb923c;
+    --teal: #2dd4bf;
+    --accent: #4ade80;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
 
-  --c1: #4ade80;   /* ціль 1 — зелена */
-  --c2: #60a5fa;   /* ціль 2 — блакитна */
-  --c3: #f59e0b;   /* ціль 3 — бурштин */
-  --c4: #e879f9;   /* ціль 4 — пурпур */
+  /* NAV */
+  .nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); display: flex; z-index: 100; }
+  .nav-btn { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 4px 14px; font-size: 10px; color: var(--muted); cursor: pointer; border: none; background: none; transition: color .2s; }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 22px; height: 22px; }
 
-  --c1-dim: rgba(74,222,128,.10);
-  --c2-dim: rgba(96,165,250,.10);
-  --c3-dim: rgba(245,158,11,.10);
-  --c4-dim: rgba(232,121,249,.10);
+  /* PAGES */
+  .page { display: none; padding: 20px 16px 90px; max-width: 480px; margin: 0 auto; }
+  .page.active { display: block; }
 
-  --r: 14px;
-  --r2: 20px;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-html, body { height: 100%; background: var(--bg); color: var(--txt); font-family: 'Inter', sans-serif; overflow: hidden; -webkit-font-smoothing: antialiased; }
+  /* TYPOGRAPHY */
+  .page-title { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  .page-sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+  .section-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 20px 0 10px; }
 
-/* ── LOGIN ── */
-#login-screen {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  height: 100dvh; background: var(--bg); padding: 32px; text-align: center;
-}
-.login-logo {
-  font-family: 'JetBrains Mono', monospace; font-size: 30px; font-weight: 800;
-  letter-spacing: 3px; margin-bottom: 6px;
-  background: linear-gradient(135deg, var(--c1), var(--c2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-}
-.login-sub { font-size: 11px; color: var(--txt3); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 48px; }
-.login-card {
-  background: var(--bg2); border: 1px solid var(--brd2); border-radius: var(--r2);
-  padding: 32px 28px; width: 100%; max-width: 360px;
-}
-.login-icon { font-size: 40px; margin-bottom: 16px; }
-.login-title { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
-.login-desc { font-size: 13px; color: var(--txt2); line-height: 1.7; margin-bottom: 28px; }
-#signin-btn {
-  width: 100%; padding: 15px; border: none; border-radius: 13px; cursor: pointer;
-  background: linear-gradient(135deg, var(--c1), #22c55e);
-  color: #0e0f14; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
-  transition: opacity .15s;
-}
-#signin-btn:active { opacity: .8; }
+  /* CARDS */
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .card-sm { padding: 12px 14px; }
 
-/* ── APP SHELL ── */
-#app {
-  display: flex; flex-direction: column; height: 100dvh;
-  max-width: 430px; margin: 0 auto; background: var(--bg); position: relative;
-}
+  /* PROGRESS BAR */
+  .progress-wrap { background: var(--border); border-radius: 99px; height: 8px; overflow: hidden; margin: 8px 0; }
+  .progress-fill { height: 100%; border-radius: 99px; transition: width .6s ease; }
+  .progress-wrap.lg { height: 14px; }
+  .progress-wrap.xl { height: 20px; border-radius: 10px; }
 
-/* ── HEADER ── */
-.hdr {
-  flex-shrink: 0; padding: 14px 16px 12px;
-  display: flex; align-items: center; justify-content: space-between;
-  background: var(--bg2); border-bottom: 1px solid var(--brd);
-  position: relative;
-}
-.hdr::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, var(--c1), var(--c2), var(--c3), var(--c4));
-}
-.hdr-brand { font-family: 'JetBrains Mono', monospace; font-size: 16px; font-weight: 800; letter-spacing: 2px; background: linear-gradient(135deg, var(--c1), var(--c2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-.hdr-sub { font-size: 9px; color: var(--txt3); letter-spacing: 2px; text-transform: uppercase; margin-top: 1px; }
-.hdr-right { display: flex; align-items: center; gap: 8px; }
-.user-chip { font-size: 9px; color: var(--txt3); font-family: 'JetBrains Mono', monospace; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.hdr-out-btn { background: none; border: 1px solid var(--brd2); color: var(--txt3); font-size: 9px; padding: 3px 7px; border-radius: 6px; cursor: pointer; font-family: 'Inter', sans-serif; }
+  /* TOTAL PROGRESS */
+  .total-card { background: linear-gradient(135deg, #1a2b1a 0%, #1a1f2e 100%); border: 1px solid #2a4a2a; border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .total-pct { font-size: 52px; font-weight: 800; line-height: 1; color: var(--green); }
+  .total-label { font-size: 13px; color: var(--muted); margin-top: 2px; margin-bottom: 12px; }
 
-/* ── PAGE ── */
-.page { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 13px 8px; }
-.page::-webkit-scrollbar { width: 0; }
+  /* GOAL CARDS */
+  .goal-card { border-radius: 14px; padding: 16px; margin-bottom: 10px; border: 1px solid; }
+  .goal-card .goal-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .goal-name { font-size: 15px; font-weight: 700; }
+  .goal-pct { font-size: 20px; font-weight: 800; }
+  .goal-amounts { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .goal-meta { display: flex; gap: 16px; margin-top: 10px; }
+  .goal-meta-item { font-size: 11px; color: var(--muted); }
+  .goal-meta-item strong { display: block; font-size: 13px; color: var(--text); margin-top: 2px; }
 
-/* ── NAV ── */
-.bnav {
-  flex-shrink: 0; display: grid; grid-template-columns: repeat(3,1fr);
-  background: var(--bg2); border-top: 1px solid var(--brd);
-  padding-bottom: env(safe-area-inset-bottom, 0);
-}
-.nb {
-  background: none; border: none; display: flex; flex-direction: column;
-  align-items: center; padding: 9px 0 8px; gap: 3px;
-  font-size: 10px; font-weight: 600; letter-spacing: .5px;
-  cursor: pointer; color: var(--txt3); font-family: 'Inter', sans-serif;
-  text-transform: uppercase; transition: color .15s;
-}
-.nb .ni { font-size: 20px; line-height: 1; }
-.nb.on { color: var(--c1); }
+  /* COLORS per goal */
+  .g0 { border-color: #4ade8044; background: #0f1f0f; }
+  .g0 .progress-fill { background: var(--green); }
+  .g0 .goal-pct { color: var(--green); }
+  .g1 { border-color: #60a5fa44; background: #0f141f; }
+  .g1 .progress-fill { background: var(--blue); }
+  .g1 .goal-pct { color: var(--blue); }
+  .g2 { border-color: #a78bfa44; background: #130f1f; }
+  .g2 .progress-fill { background: var(--purple); }
+  .g2 .goal-pct { color: var(--purple); }
+  .g3 { border-color: #fb923c44; background: #1f130f; }
+  .g3 .progress-fill { background: var(--orange); }
+  .g3 .goal-pct { color: var(--orange); }
 
-/* ── TODAY INPUT CARD ── */
-.today-card {
-  background: var(--bg2); border: 1px solid var(--brd2); border-radius: var(--r2);
-  margin-bottom: 13px; overflow: hidden; position: relative;
-}
-.today-card::before {
-  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  background: linear-gradient(90deg, var(--c1), var(--c2));
-}
-.today-top { padding: 14px 16px 12px; }
-.today-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--txt3); margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; }
-.today-date-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
-.today-date { font-family: 'JetBrains Mono', monospace; font-size: 15px; font-weight: 700; color: var(--txt); }
-.today-status { font-size: 11px; padding: 3px 10px; border-radius: 20px; font-weight: 700; }
-.today-status.done { background: var(--c1-dim); color: var(--c1); }
-.today-status.empty { background: rgba(255,255,255,.05); color: var(--txt3); }
+  /* INCOME INPUT */
+  .income-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .income-input { flex: 1; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 10px; padding: 12px 14px; font-size: 16px; outline: none; }
+  .income-input:focus { border-color: var(--accent); }
+  .btn { padding: 12px 20px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: opacity .15s; }
+  .btn:active { opacity: .8; }
+  .btn-primary { background: var(--accent); color: #000; }
+  .btn-secondary { background: var(--surface2); color: var(--text); }
+  .btn-danger { background: var(--red-dim); color: var(--red); }
 
-.input-wrap { position: relative; margin-bottom: 12px; }
-.input-wrap .currency { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--txt3); font-weight: 600; pointer-events: none; }
-.day-input {
-  width: 100%; background: var(--bg3); border: 1.5px solid var(--brd2);
-  border-radius: 13px; padding: 15px 48px 15px 16px;
-  color: var(--txt); font-size: 20px; font-weight: 700;
-  font-family: 'JetBrains Mono', monospace; outline: none;
-  transition: border-color .2s, background .2s;
-}
-.day-input:focus { border-color: var(--c1); background: #1a1d2a; }
-.day-input::placeholder { color: var(--txt3); font-size: 16px; font-weight: 400; }
+  /* DISTRIBUTION POPUP */
+  .dist-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-top: 4px; }
+  .dist-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); }
+  .dist-row:last-child { border-bottom: none; }
+  .dist-name { font-size: 13px; color: var(--muted); }
+  .dist-amount { font-size: 14px; font-weight: 700; }
 
-.save-btn {
-  width: 100%; padding: 14px; border: none; border-radius: 13px;
-  background: linear-gradient(135deg, var(--c1), #22c55e);
-  color: #0e0f14; font-size: 14px; font-weight: 700;
-  font-family: 'Inter', sans-serif; cursor: pointer; transition: opacity .15s;
-}
-.save-btn:active { opacity: .8; }
-.save-btn.saved { background: linear-gradient(135deg, #22c55e, #16a34a); }
+  /* DAYS */
+  .days-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+  .day-cell { aspect-ratio: 1; border-radius: 8px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 10px; cursor: pointer; position: relative; }
+  .day-cell .day-num { font-size: 13px; font-weight: 700; }
+  .day-done { background: var(--green-dim); color: var(--green); border: 1px solid #4ade8033; }
+  .day-partial { background: var(--yellow-dim); color: var(--yellow); border: 1px solid #facc1533; }
+  .day-miss { background: var(--red-dim); color: var(--red); border: 1px solid #f8717133; }
+  .day-future { background: var(--surface2); color: var(--muted); border: 1px solid var(--border); }
+  .day-today { border: 2px solid var(--accent) !important; }
 
-/* ── EXPENSE ROW ── */
-.extra-row { padding: 0 16px 14px; display: flex; gap: 8px; }
-.extra-inp {
-  flex: 1; background: var(--bg3); border: 1.5px solid var(--brd);
-  border-radius: 11px; padding: 10px 12px; color: var(--txt);
-  font-size: 14px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
-  outline: none; transition: border-color .2s;
-}
-.extra-inp:focus { border-color: var(--brd2); }
-.extra-label { font-size: 10px; color: var(--txt3); margin-bottom: 5px; letter-spacing: 1px; text-transform: uppercase; font-weight: 700; }
+  /* ANALYTICS CHART */
+  .chart-wrap { position: relative; height: 160px; margin: 10px 0; }
+  canvas { border-radius: 8px; }
 
-/* ── GOALS GRID ── */
-.goals-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 13px; }
-.goal-card {
-  background: var(--bg2); border: 1px solid var(--brd);
-  border-radius: var(--r); padding: 13px 13px 11px;
-  position: relative; overflow: hidden; transition: border-color .2s, transform .1s;
-  cursor: default;
-}
-.goal-card.active { border-color: var(--gc); box-shadow: 0 0 0 1px var(--gc), 0 0 20px var(--gc-glow); }
-.goal-card.done { opacity: .55; }
-.goal-card.reached { border-color: var(--gc); }
-.goal-num { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; color: var(--txt3); margin-bottom: 8px; }
-.goal-dollar { font-family: 'JetBrains Mono', monospace; font-size: 18px; font-weight: 800; color: var(--gc); line-height: 1; }
-.goal-uah { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--txt2); margin-top: 2px; margin-bottom: 10px; }
-.goal-prog-track { height: 5px; background: rgba(255,255,255,.07); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
-.goal-prog-fill { height: 100%; border-radius: 3px; background: var(--gc); transition: width .6s cubic-bezier(.4,0,.2,1); }
-.goal-pct { font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 700; color: var(--gc); }
-.goal-earned { font-size: 11px; color: var(--txt3); margin-top: 2px; }
-.goal-badge {
-  position: absolute; top: 9px; right: 9px;
-  font-size: 10px; padding: 2px 7px; border-radius: 20px;
-  font-weight: 700; font-family: 'JetBrains Mono', monospace;
-}
-.goal-badge.active-badge { background: var(--gc-dim); color: var(--gc); }
-.goal-badge.done-badge { background: rgba(255,255,255,.06); color: var(--txt3); }
-.goal-badge.reached-badge { background: var(--gc-dim); color: var(--gc); }
+  /* FORECAST */
+  .forecast-list { display: flex; flex-direction: column; gap: 8px; }
+  .forecast-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--surface2); border-radius: 10px; }
+  .forecast-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .forecast-text { flex: 1; font-size: 13px; }
+  .forecast-days { font-size: 12px; color: var(--muted); }
 
-/* ── NORM ROW ── */
-.norm-row {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 14px; background: var(--bg2); border: 1px solid var(--brd);
-  border-radius: 12px; margin-bottom: 13px;
-}
-.norm-lbl { font-size: 11px; color: var(--txt3); }
-.norm-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--txt); }
+  /* SETTINGS */
+  .setting-goal { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .setting-goal-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-weight: 700; }
+  .setting-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .input-group label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+  .input-group input { width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 11px; font-size: 14px; outline: none; }
+  .input-group input:focus { border-color: var(--accent); }
+  .input-full { grid-column: 1 / -1; }
+  .norm-badge { background: var(--surface2); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .norm-badge strong { color: var(--text); }
 
-/* ── DAY LIST ── */
-.day-item {
-  display: flex; align-items: center; gap: 11px;
-  padding: 11px 13px; background: var(--bg2); border: 1px solid var(--brd);
-  border-radius: 12px; margin-bottom: 7px; cursor: pointer;
-  transition: border-color .15s, background .15s;
-  border-left: 3px solid transparent;
-}
-.day-item:active { opacity: .75; }
-.day-item.has-data { border-left-color: var(--c1); }
-.day-item.today { border-color: var(--brd2); background: #1a1d2a; }
-.day-item.future { opacity: .4; pointer-events: none; }
-.day-num {
-  width: 32px; height: 32px; border-radius: 9px; background: var(--bg3);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 12px; font-weight: 700; color: var(--txt3);
-  font-family: 'JetBrains Mono', monospace; flex-shrink: 0; border: 1px solid var(--brd);
-}
-.day-num.today-n { background: rgba(74,222,128,.1); color: var(--c1); border-color: rgba(74,222,128,.3); }
-.day-body { flex: 1; min-width: 0; }
-.day-date { font-size: 13px; font-weight: 600; color: var(--txt); font-family: 'JetBrains Mono', monospace; }
-.day-sub { font-size: 11px; color: var(--txt3); margin-top: 2px; }
-.day-right { text-align: right; flex-shrink: 0; }
-.day-earned { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; }
-.day-note { font-size: 10px; color: var(--txt3); margin-top: 2px; }
+  /* TOAST */
+  .toast { position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%) translateY(20px); background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 10px 18px; font-size: 13px; opacity: 0; pointer-events: none; transition: all .3s; z-index: 200; white-space: nowrap; }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ── ANALYTICS ── */
-.stat-card { background: var(--bg2); border: 1px solid var(--brd); border-radius: var(--r2); margin-bottom: 11px; overflow: hidden; }
-.stat-head { padding: 13px 16px 11px; border-bottom: 1px solid var(--brd); }
-.stat-title { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--txt3); font-family: 'JetBrains Mono', monospace; }
-.stat-body { padding: 12px 16px; }
-.srow { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,.04); }
-.srow:last-child { border-bottom: none; }
-.slbl { font-size: 13px; color: var(--txt2); }
-.sval { font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 700; color: var(--txt); }
+  /* BADGE */
+  .badge { display: inline-block; padding: 3px 8px; border-radius: 99px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: var(--green-dim); color: var(--green); }
+  .badge-yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .badge-red { background: var(--red-dim); color: var(--red); }
 
-/* ── SETTINGS ── */
-.sett-section { margin-bottom: 14px; }
-.sett-label { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--txt3); margin-bottom: 8px; display: block; font-family: 'JetBrains Mono', monospace; }
-.sett-input {
-  width: 100%; background: var(--bg3); border: 1.5px solid var(--brd2);
-  border-radius: 11px; padding: 13px 14px; color: var(--txt);
-  font-size: 15px; font-weight: 600; font-family: 'JetBrains Mono', monospace;
-  outline: none; transition: border-color .2s; margin-bottom: 8px;
-}
-.sett-input:focus { border-color: var(--c1); }
-.sett-goals { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.goal-inp-wrap { position: relative; }
-.goal-inp-label {
-  position: absolute; top: 9px; left: 13px;
-  font-size: 9px; color: var(--txt3); font-family: 'JetBrains Mono', monospace;
-  font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
-  pointer-events: none;
-}
-.goal-inp {
-  width: 100%; background: var(--bg3); border: 1.5px solid var(--brd2);
-  border-radius: 11px; padding: 26px 14px 10px; color: var(--txt);
-  font-size: 16px; font-weight: 700; font-family: 'JetBrains Mono', monospace;
-  outline: none; transition: border-color .2s;
-}
-.goal-inp:focus { border-color: var(--c1); }
-.save-sett-btn {
-  width: 100%; padding: 14px; border: none; border-radius: 13px; cursor: pointer;
-  background: linear-gradient(135deg, var(--c1), #22c55e);
-  color: #0e0f14; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif;
-  transition: opacity .15s; margin-bottom: 10px;
-}
-.save-sett-btn:active { opacity: .8; }
-.danger-btn {
-  width: 100%; padding: 13px; border: 1px solid rgba(232,40,74,.25);
-  border-radius: 13px; cursor: pointer; background: transparent;
-  color: #e8284a; font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif;
-}
+  /* LEGEND */
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin: 8px 0; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
 
-/* ── MODAL ── */
-.ov { position: fixed; inset: 0; background: rgba(0,0,0,.65); display: flex; align-items: flex-end; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity .2s; backdrop-filter: blur(8px); }
-.ov.open { opacity: 1; pointer-events: all; }
-.modal { background: var(--bg2); border-radius: 22px 22px 0 0; width: 100%; max-width: 430px; border: 1px solid var(--brd2); border-bottom: none; transform: translateY(28px); transition: transform .22s ease; max-height: 92dvh; overflow-y: auto; padding-bottom: env(safe-area-inset-bottom, 16px); }
-.ov.open .modal { transform: translateY(0); }
-.mhandle { width: 36px; height: 4px; background: var(--brd2); border-radius: 2px; margin: 12px auto 0; }
-.mhdr { padding: 14px 18px 12px; border-bottom: 1px solid var(--brd); }
-.mt { font-size: 17px; font-weight: 700; color: var(--txt); }
-.ms { font-size: 12px; color: var(--txt3); margin-top: 4px; font-family: 'JetBrains Mono', monospace; }
-.mbody { padding: 14px 18px; }
-.ml { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--txt3); margin-bottom: 7px; display: block; font-family: 'JetBrains Mono', monospace; }
-.ml:not(:first-child) { margin-top: 14px; }
-.min { width: 100%; background: var(--bg3); border: 1.5px solid var(--brd2); border-radius: 11px; padding: 13px 14px; color: var(--txt); font-size: 16px; font-weight: 600; font-family: 'JetBrains Mono', monospace; outline: none; transition: border-color .2s; }
-.min:focus { border-color: var(--c1); }
-.mbtns { display: flex; gap: 8px; padding: 10px 18px 11px; }
-.mbtn { flex: 1; padding: 14px; border: none; border-radius: 13px; font-size: 14px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; transition: opacity .12s; }
-.mbtn:active { opacity: .8; }
-.mbtn-ok { background: linear-gradient(135deg, var(--c1), #22c55e); color: #0e0f14; }
-.mbtn-no { background: var(--bg3); color: var(--txt2); border: 1px solid var(--brd2); }
-.del-btn { width: calc(100% - 36px); margin: 0 18px 8px; padding: 12px; background: transparent; color: #e8284a; border: 1px solid rgba(232,40,74,.2); border-radius: 12px; font-size: 13px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; }
+  /* STATS ROW */
+  .stats-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+  .stat-cell { background: var(--surface2); border-radius: 12px; padding: 12px; }
+  .stat-val { font-size: 20px; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 2px; }
 
-/* ── TOAST ── */
-.toast { position: fixed; bottom: 75px; left: 50%; transform: translateX(-50%) translateY(10px); padding: 10px 22px; border-radius: 18px; font-size: 13px; font-weight: 700; z-index: 300; opacity: 0; transition: all .2s; pointer-events: none; white-space: nowrap; font-family: 'JetBrains Mono', monospace; box-shadow: 0 4px 16px rgba(0,0,0,.4); }
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.ok { background: var(--c1); color: #0e0f14; }
-.toast.err { background: #e8284a; color: #fff; }
-.toast.inf { background: var(--bg3); color: var(--txt); border: 1px solid var(--brd2); }
+  /* DIVIDER */
+  hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
 
-.empty { text-align: center; padding: 50px 20px; color: var(--txt3); }
-.empty-ico { font-size: 46px; margin-bottom: 12px; opacity: .4; }
-.empty-txt { font-size: 14px; line-height: 1.7; font-weight: 600; }
-.section-lbl { font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--txt3); margin-bottom: 9px; font-family: 'JetBrains Mono', monospace; }
-.chip-row { display: flex; gap: 8px; margin-bottom: 13px; }
-.chip { flex: 1; background: var(--bg2); border: 1px solid var(--brd); border-radius: 13px; padding: 10px 8px; text-align: center; }
-.chip-v { font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700; line-height: 1.2; }
-.chip-l { font-size: 10px; color: var(--txt3); letter-spacing: .5px; text-transform: uppercase; margin-top: 3px; }
+  /* SCROLLABLE */
+  .scroll-x { overflow-x: auto; }
 
-@keyframes fu { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.fu { animation: fu .22s ease forwards; }
-
-/* ── DESKTOP ── */
-@media(min-width: 768px) {
-  html, body { overflow: auto; }
-  #app { max-width: 100% !important; height: 100dvh; display: grid !important; grid-template-rows: auto 1fr; grid-template-columns: 200px 1fr; grid-template-areas: "hdr hdr" "nav main"; }
-  .hdr { grid-area: hdr; padding: 14px 28px; }
-  .bnav { grid-area: nav; display: flex !important; flex-direction: column; border-top: none; border-right: 1px solid var(--brd); padding: 16px 0; gap: 2px; background: var(--bg2); }
-  .nb { flex-direction: row; justify-content: flex-start; padding: 12px 18px; gap: 12px; font-size: 11px; border-radius: 10px; margin: 0 8px; }
-  .nb .ni { font-size: 20px; }
-  .nb.on { background: rgba(74,222,128,.1); color: var(--c1); }
-  .page { grid-area: main; padding: 20px 28px; overflow-y: auto; height: 100%; }
-  .ov { align-items: center; }
-  .modal { border-radius: 20px; max-width: 520px; border: 1px solid var(--brd2); }
-  .toast { bottom: 30px; }
-}
+  /* RESET BTN */
+  .reset-section { margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border); }
 </style>
 </head>
 <body>
 
-<!-- ══ LOGIN ══ -->
-<div id="login-screen" style="display:flex">
-  <div class="login-logo">DELIVERY</div>
-  <div class="login-sub">ЩОДЕННИК ДОСТАВКИ</div>
-  <div class="login-card">
-    <div class="login-icon">🚴</div>
-    <div class="login-title">Синхронізація між пристроями</div>
-    <div class="login-desc">Ваші дані автоматично синхронізуються на ПК та телефоні через Google акаунт</div>
-    <button id="signin-btn" onclick="_fbSignIn()">🔑 Увійти через Google</button>
+<!-- PAGES -->
+<div id="page-home" class="page active">
+  <div class="page-title">🚀 Delivery Dream</div>
+  <div class="page-sub" id="home-date"></div>
+
+  <!-- Total progress -->
+  <div class="total-card">
+    <div class="total-pct" id="total-pct">0%</div>
+    <div class="total-label">Загальний прогрес</div>
+    <div class="progress-wrap xl">
+      <div class="progress-fill" id="total-bar" style="background: linear-gradient(90deg, #4ade80, #60a5fa); width: 0%"></div>
+    </div>
+    <div style="display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-top:6px;">
+      <span id="total-saved">0 грн</span>
+      <span id="total-target">0 грн</span>
+    </div>
+  </div>
+
+  <!-- Income input -->
+  <div class="card card-sm">
+    <div class="section-label" style="margin-top:0">Зароблено сьогодні</div>
+    <div class="income-row">
+      <input class="income-input" id="income-input" type="number" placeholder="300" min="0">
+      <button class="btn btn-primary" onclick="saveIncome()">Зберегти</button>
+    </div>
+    <div id="dist-preview" style="display:none">
+      <div class="section-label" style="margin-top:8px">Розподіл між цілями</div>
+      <div class="dist-card" id="dist-list"></div>
+    </div>
+  </div>
+
+  <!-- Goal cards -->
+  <div class="section-label">Цілі</div>
+  <div id="goals-list"></div>
+</div>
+
+<div id="page-analytics" class="page">
+  <div class="page-title">📈 Аналітика</div>
+  <div class="page-sub">Динаміка та статистика</div>
+
+  <div class="stats-row" id="analytics-stats"></div>
+
+  <div class="section-label">Дохід по днях</div>
+  <div class="card" style="padding:12px">
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Фактичний</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--muted); opacity:.5"></div> <span style="border-top:1px dashed var(--muted); width:14px; display:inline-block; vertical-align:middle"></span> План</div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="income-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="section-label">Прогрес цілей</div>
+  <div class="card" style="padding:12px">
+    <div class="chart-wrap">
+      <canvas id="goals-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="section-label">Прогноз виконання</div>
+  <div class="forecast-list" id="forecast-list"></div>
+</div>
+
+<div id="page-days" class="page">
+  <div class="page-title">📅 Дні</div>
+  <div class="page-sub">Щоденний трекер</div>
+
+  <div class="legend" style="margin-bottom:12px">
+    <div class="legend-item"><div class="legend-dot" style="background:var(--green)"></div> Норма виконана</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--yellow)"></div> Частково</div>
+    <div class="legend-item"><div class="legend-dot" style="background:var(--red)"></div> Не внесено</div>
+  </div>
+
+  <div class="card" style="padding:12px">
+    <div class="days-grid" id="days-grid"></div>
+  </div>
+
+  <div class="section-label">Детальний список</div>
+  <div id="days-list"></div>
+</div>
+
+<div id="page-settings" class="page">
+  <div class="page-title">⚙️ Налаштування</div>
+  <div class="page-sub">Налаштуйте свої цілі</div>
+
+  <div id="settings-goals"></div>
+
+  <button class="btn btn-primary" style="width:100%; margin-top:8px" onclick="saveSettings()">💾 Зберегти налаштування</button>
+
+  <div class="reset-section">
+    <div class="section-label" style="margin-top:0">Небезпечна зона</div>
+    <button class="btn btn-danger" style="width:100%" onclick="resetAll()">🗑 Скинути всі дані</button>
   </div>
 </div>
 
-<!-- ══ APP ══ -->
-<div id="app" style="display:none">
-  <div class="hdr">
-    <div>
-      <div class="hdr-brand">DELIVERY</div>
-      <div class="hdr-sub">щоденник · грн</div>
-    </div>
-    <div class="hdr-right">
-      <span class="user-chip" id="user-name"></span>
-      <button class="hdr-out-btn" onclick="_fbSignOut()">Вийти</button>
-    </div>
-  </div>
-  <div class="page" id="page"></div>
-  <div class="bnav" id="bnav"></div>
-</div>
-
-<!-- ══ DAY MODAL (edit past day) ══ -->
-<div class="ov" id="ov-day" onclick="ovClick(event,'ov-day')">
-<div class="modal">
-  <div class="mhandle"></div>
-  <div class="mhdr">
-    <div class="mt" id="dm-title">День</div>
-    <div class="ms" id="dm-sub"></div>
-  </div>
-  <div class="mbody">
-    <span class="ml">Заробив (грн)</span>
-    <input class="min" id="dm-earned" type="number" inputmode="decimal" placeholder="напр: 350">
-    <span class="ml">Витрати (грн)</span>
-    <input class="min" id="dm-expense" type="number" inputmode="decimal" placeholder="0">
-    <span class="ml">Нотатка</span>
-    <input class="min" id="dm-note" type="text" placeholder="Що їздив...">
-  </div>
-  <div class="mbtns">
-    <button class="mbtn mbtn-no" onclick="closeOv('ov-day')">Скасувати</button>
-    <button class="mbtn mbtn-ok" onclick="saveDay()">💾 Зберегти</button>
-  </div>
-  <div style="padding:0 18px 8px">
-    <button class="del-btn" id="dm-del-btn" onclick="clearDay()" style="display:none">🗑 Очистити день</button>
-  </div>
-</div>
-</div>
-
-<!-- ══ RESET CONFIRM ══ -->
-<div class="ov" id="ov-reset" onclick="ovClick(event,'ov-reset')">
-<div class="modal">
-  <div class="mhandle"></div>
-  <div class="mhdr">
-    <div class="mt" style="color:#e8284a">⚠️ Скинути все?</div>
-    <div class="ms">Видалить всі дані та записи</div>
-  </div>
-  <div class="mbody">
-    <div style="background:rgba(232,40,74,.08);border:1px solid rgba(232,40,74,.15);border-radius:12px;padding:14px;font-size:14px;color:var(--txt2);line-height:1.9">
-      ✗ Всі записані дні<br>✗ Вся аналітика<br>✗ Налаштування
-    </div>
-  </div>
-  <div class="mbtns">
-    <button class="mbtn mbtn-no" onclick="closeOv('ov-reset')">Скасувати</button>
-    <button class="mbtn" style="background:#e8284a;color:#fff" onclick="doReset()">Скинути</button>
-  </div>
-</div>
-</div>
+<!-- NAV -->
+<nav class="nav">
+  <button class="nav-btn active" onclick="showPage('home', this)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+    Головна
+  </button>
+  <button class="nav-btn" onclick="showPage('analytics', this)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.49l6-6.01 4 4L22 6.92l-1.41-1.41-7.09 7.97-4-4L2 17.07z"/></svg>
+    Аналітика
+  </button>
+  <button class="nav-btn" onclick="showPage('days', this)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/></svg>
+    Дні
+  </button>
+  <button class="nav-btn" onclick="showPage('settings', this)">
+    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+    Налаштування
+  </button>
+</nav>
 
 <div class="toast" id="toast"></div>
 
 <script>
-'use strict';
-const SK = 'delivery_v3';
-const DAY_NAMES = ['Нд','Пн','Вт','Ср','Чт','Пт','Сб'];
-const GOAL_COLORS = ['--c1','--c2','--c3','--c4'];
-const GOAL_LABELS = ['Ціль 1','Ціль 2','Ціль 3','Ціль 4'];
+// ─── STATE ────────────────────────────────────────────────────────────────────
+const GOAL_COLORS = ['#4ade80','#60a5fa','#a78bfa','#fb923c'];
 
-// Кольори для карток
-const GC = [
-  { color: '#4ade80', dim: 'rgba(74,222,128,.12)', glow: 'rgba(74,222,128,.15)' },
-  { color: '#60a5fa', dim: 'rgba(96,165,250,.12)', glow: 'rgba(96,165,250,.15)' },
-  { color: '#f59e0b', dim: 'rgba(245,158,11,.12)', glow: 'rgba(245,158,11,.15)' },
-  { color: '#e879f9', dim: 'rgba(232,121,249,.12)', glow: 'rgba(232,121,249,.15)' },
+const DEFAULT_GOALS = [
+  { name: 'Ціль 1', target: 7553, days: 153, saved: 0 },
+  { name: 'Ціль 2', target: 15107, days: 60, saved: 0 },
+  { name: 'Ціль 3', target: 22660, days: 30, saved: 0 },
+  { name: 'Ціль 4', target: 30214, days: 15, saved: 0 },
 ];
 
-const DEF = {
-  tab: 0,
-  cfg: {
-    startDate: '',
-    totalDays: 153,
-    rate: 46.60,
-    goals: [162.09, 324.19, 486.28, 648.38]  // в доларах
-  },
-  days: []
-};
+let state = loadState();
 
-let S = clone(DEF);
-let _openDate = null;
-
-function load() {
-  let raw = null;
-  try { raw = localStorage.getItem(SK); } catch {}
-  try { S = raw ? JSON.parse(raw) : clone(DEF); } catch { S = clone(DEF); }
-  if (!S.cfg) S.cfg = clone(DEF.cfg);
-  if (!S.days) S.days = [];
-  if (S.tab == null) S.tab = 0;
-  if (!S.cfg.goals) S.cfg.goals = [...DEF.cfg.goals];
-  if (!S.cfg.rate) S.cfg.rate = DEF.cfg.rate;
-}
-function save() {
-  try { localStorage.setItem(SK, JSON.stringify(S)); } catch(e) {}
-  if (window._fbSave) window._fbSave(S);
-}
-window._fbLoaded = function(data) {
-  if (data) {
-    S = data;
-    if (!S.cfg) S.cfg = clone(DEF.cfg);
-    if (!S.days) S.days = [];
-    if (S.tab == null) S.tab = 0;
-    if (!S.cfg.goals) S.cfg.goals = [...DEF.cfg.goals];
-    if (!S.cfg.rate) S.cfg.rate = DEF.cfg.rate;
-    try { localStorage.setItem(SK, JSON.stringify(S)); } catch {}
-  } else {
-    S = clone(DEF);
-  }
-  buildNav(); render();
-};
-function clone(o) { return JSON.parse(JSON.stringify(o)); }
-
-// ── UTILS ──
-const f = (v, d=0) => v == null || isNaN(v) ? '—' : (+v).toFixed(d);
-const todayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-};
-function fmtDate(str) {
-  const d = new Date(str + 'T00:00:00');
-  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')} ${DAY_NAMES[d.getDay()]}`;
-}
-function addDays(str, n) {
-  const d = new Date(str + 'T00:00:00'); d.setDate(d.getDate() + n);
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
-function getDay(str) { return S.days.find(d => d.date === str) || null; }
-
-// ── РОЗРАХУНКИ ──
-function goalsUAH() {
-  return S.cfg.goals.map(g => g * S.cfg.rate);
-}
-function totalEarned() {
-  return S.days.reduce((s, d) => s + (d.earned || 0), 0);
-}
-// Знайти "активну" ціль — найближча невиконана, або остання якщо всі виконані
-function activeGoalIdx() {
-  const earned = totalEarned();
-  const uah = goalsUAH();
-  for (let i = 0; i < uah.length; i++) {
-    if (earned < uah[i]) return i;
-  }
-  return uah.length - 1; // всі виконані — показуємо останню
-}
-function normForDay() {
-  // норма в день відносно поточної активної цілі
-  const idx = activeGoalIdx();
-  const earned = totalEarned();
-  const target = goalsUAH()[idx];
-  const remaining = Math.max(target - earned, 0);
-  const totalDays = S.cfg.totalDays || 153;
-  const allDates = buildDaysList();
-  const tdStr = todayStr();
-  const daysPassed = allDates.filter(d => d <= tdStr).length;
-  const daysLeft = Math.max(totalDays - daysPassed + 1, 1);
-  return remaining / daysLeft;
-}
-function buildDaysList() {
-  const total = S.cfg.totalDays || 153;
-  const start = S.cfg.startDate || todayStr();
-  const list = [];
-  for (let i = 0; i < total; i++) list.push(addDays(start, i));
-  return list;
-}
-function workedDays() { return S.days.filter(d => d.earned > 0).length; }
-function avgPerDay() {
-  const wd = workedDays();
-  return wd > 0 ? totalEarned() / wd : 0;
-}
-
-// ── NAV ──
-const TABS = [
-  { ico: '🏠', lbl: 'Головна' },
-  { ico: '📅', lbl: 'Дні' },
-  { ico: '⚙️', lbl: 'Нал.' }
-];
-function buildNav() {
-  document.getElementById('bnav').innerHTML = TABS.map((t, i) =>
-    `<button class="nb${i === S.tab ? ' on' : ''}" onclick="setTab(${i})"><span class="ni">${t.ico}</span>${t.lbl}</button>`
-  ).join('');
-}
-function setTab(t) { S.tab = t; save(); buildNav(); render(); }
-
-function render() {
-  const p = document.getElementById('page');
+function loadState() {
   try {
-    let h = '';
-    if (S.tab === 0) h = renderHome();
-    else if (S.tab === 1) h = renderDays();
-    else h = renderSettings();
-    p.innerHTML = `<div class="fu">${h}</div>`;
-  } catch(e) {
-    p.innerHTML = `<div style="padding:20px;color:#e8284a;font-size:13px;font-family:'JetBrains Mono',monospace">Помилка: ${e.message}<br><br><button onclick="localStorage.clear();location.reload()" style="background:#e8284a;color:#fff;border:none;padding:8px 16px;border-radius:8px;cursor:pointer">СКИНУТИ</button></div>`;
-  }
+    const s = JSON.parse(localStorage.getItem('dd_v4'));
+    if (s) return s;
+  } catch(e){}
+  return {
+    goals: JSON.parse(JSON.stringify(DEFAULT_GOALS)),
+    days: [],        // [{date, amount}]
+    startDate: new Date().toISOString().slice(0,10)
+  };
 }
 
-// ══ TAB 0: ГОЛОВНА ══
+function saveState() {
+  localStorage.setItem('dd_v4', JSON.stringify(state));
+}
+
+// ─── COMPUTED ─────────────────────────────────────────────────────────────────
+function totalSaved() {
+  return state.goals.reduce((s,g) => s + (g.saved||0), 0);
+}
+function totalTarget() {
+  return state.goals.reduce((s,g) => s + g.target, 0);
+}
+function dailyNorm() {
+  return state.goals.reduce((s,g) => {
+    const n = g.days > 0 ? g.target / g.days : 0;
+    return s + n;
+  }, 0);
+}
+function totalDailyNorm() {
+  return dailyNorm();
+}
+function goalNorm(g) {
+  return g.days > 0 ? g.target / g.days : 0;
+}
+function distribute(amount) {
+  const norm = totalDailyNorm();
+  if (norm === 0) return state.goals.map(() => 0);
+  return state.goals.map(g => {
+    const share = goalNorm(g) / norm;
+    return Math.round(amount * share * 100) / 100;
+  });
+}
+function avgIncome() {
+  if (!state.days.length) return 0;
+  const sum = state.days.reduce((s,d)=>s+d.amount,0);
+  return sum / state.days.length;
+}
+
+// ─── NAVIGATION ───────────────────────────────────────────────────────────────
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(name === 'analytics') renderAnalytics();
+  if(name === 'days') renderDays();
+  if(name === 'settings') renderSettings();
+  if(name === 'home') renderHome();
+}
+
+// ─── HOME ─────────────────────────────────────────────────────────────────────
 function renderHome() {
-  if (!S.cfg.startDate) {
-    return `<div class="empty"><div class="empty-ico">🚗</div><div class="empty-txt">Спочатку налаштуй<br>дату початку в ⚙️ Нал.</div></div>`;
-  }
+  // Date
+  const d = new Date();
+  const opts = {weekday:'long',day:'numeric',month:'long'};
+  document.getElementById('home-date').textContent = d.toLocaleDateString('uk-UA',opts);
 
-  const tdStr = todayStr();
-  const todayRec = getDay(tdStr);
-  const todayEarned = todayRec ? (todayRec.earned || 0) : 0;
-  const totalE = totalEarned();
-  const activeIdx = activeGoalIdx();
-  const uahGoals = goalsUAH();
-  const allFull = totalE >= uahGoals[uahGoals.length - 1];
+  // Total
+  const ts = totalSaved(), tt = totalTarget();
+  const pct = tt > 0 ? Math.round(ts/tt*100) : 0;
+  document.getElementById('total-pct').textContent = pct + '%';
+  document.getElementById('total-bar').style.width = Math.min(pct,100) + '%';
+  document.getElementById('total-saved').textContent = fmt(ts) + ' грн';
+  document.getElementById('total-target').textContent = fmt(tt) + ' грн';
 
-  // ── Today input card ──
-  const hasSaved = todayEarned > 0;
-  const todayCard = `<div class="today-card">
-    <div class="today-top">
-      <div class="today-label">Сьогодні</div>
-      <div class="today-date-row">
-        <div class="today-date">${fmtDate(tdStr)}</div>
-        <div class="today-status ${hasSaved ? 'done' : 'empty'}">${hasSaved ? `✓ ${f(todayEarned)} грн` : 'Не внесено'}</div>
+  // Goal cards
+  const el = document.getElementById('goals-list');
+  el.innerHTML = state.goals.map((g,i) => {
+    const pct = g.target > 0 ? Math.min(100, Math.round((g.saved||0)/g.target*100)) : 0;
+    const left = Math.max(0, g.target - (g.saved||0));
+    const norm = goalNorm(g);
+    return `
+    <div class="goal-card g${i}">
+      <div class="goal-top">
+        <div class="goal-name">🎯 ${esc(g.name)}</div>
+        <div class="goal-pct">${pct}%</div>
       </div>
-      <div class="input-wrap">
-        <input class="day-input" id="today-input" type="number" inputmode="decimal"
-          placeholder="Скільки заробив..." value="${hasSaved && todayEarned > 0 ? todayEarned : ''}"
-          oninput="updateTodayPreview()">
-        <span class="currency">грн</span>
+      <div class="progress-wrap lg">
+        <div class="progress-fill" style="width:${pct}%"></div>
       </div>
-      <button class="save-btn ${hasSaved ? 'saved' : ''}" onclick="saveTodayFast()">${hasSaved ? '✅ Оновити день' : '💾 Зберегти день'}</button>
-    </div>
-    <div class="extra-row">
-      <div style="flex:1">
-        <div class="extra-label">Витрати</div>
-        <input class="extra-inp" id="today-expense" type="number" inputmode="decimal"
-          placeholder="0" value="${todayRec && todayRec.expense ? todayRec.expense : ''}">
+      <div class="goal-amounts">
+        <span>${fmt(g.saved||0)} грн</span>
+        <span>${fmt(g.target)} грн</span>
       </div>
-      <div style="flex:2">
-        <div class="extra-label">Нотатка</div>
-        <input class="extra-inp" id="today-note" type="text" style="font-family:'Inter',sans-serif;font-size:13px"
-          placeholder="Що їздив..." value="${todayRec && todayRec.note ? todayRec.note : ''}">
+      <div class="goal-meta">
+        <div class="goal-meta-item">Залишилось<strong>${fmt(left)} грн</strong></div>
+        <div class="goal-meta-item">Норма/день<strong>${fmt(norm)} грн</strong></div>
+        <div class="goal-meta-item">Днів<strong>${g.days}</strong></div>
       </div>
-    </div>
-  </div>`;
-
-  // ── Норма дня ──
-  const norm = normForDay();
-  const normRow = `<div class="norm-row">
-    <span class="norm-lbl">🎯 Норма сьогодні (ціль ${activeIdx + 1})</span>
-    <span class="norm-val" style="color:${GC[activeIdx].color}">${f(norm, 1)} грн/день</span>
-  </div>`;
-
-  // ── 4 картки цілей ──
-  const goalCards = uahGoals.map((target, i) => {
-    const prog = Math.min(totalE / target, 1);
-    const pct = (prog * 100).toFixed(1);
-    const isActive = i === activeIdx && !allFull;
-    const isDone = totalE >= target && i < activeIdx;
-    const isReached = totalE >= target;
-    const gc = GC[i];
-
-    let badge = '';
-    if (isActive) badge = `<div class="goal-badge active-badge" style="--gc:${gc.color};--gc-dim:${gc.dim}">АКТИВНА</div>`;
-    else if (isReached) badge = `<div class="goal-badge reached-badge" style="--gc:${gc.color};--gc-dim:${gc.dim}">✓ Досягнуто</div>`;
-
-    return `<div class="goal-card${isActive ? ' active' : ''}${isDone ? ' done' : ''}${isReached && !isActive ? ' reached' : ''}"
-      style="--gc:${gc.color};--gc-dim:${gc.dim};--gc-glow:${gc.glow}">
-      ${badge}
-      <div class="goal-num">${GOAL_LABELS[i]}</div>
-      <div class="goal-dollar">$${f(S.cfg.goals[i], 2)}</div>
-      <div class="goal-uah">${f(target)} грн</div>
-      <div class="goal-prog-track"><div class="goal-prog-fill" style="width:${pct}%"></div></div>
-      <div class="goal-pct">${pct}%</div>
-      <div class="goal-earned" style="color:var(--txt3);font-size:10px;margin-top:2px">${f(totalE)} / ${f(target)} грн</div>
     </div>`;
   }).join('');
+}
 
-  // ── Чіпси ──
-  const chips = `<div class="chip-row">
-    <div class="chip">
-      <div class="chip-v" style="color:var(--c1)">${workedDays()}</div>
-      <div class="chip-l">Відпрацьовано</div>
-    </div>
-    <div class="chip">
-      <div class="chip-v" style="color:var(--c3)">${f(avgPerDay())}</div>
-      <div class="chip-l">Сер/день</div>
-    </div>
-    <div class="chip">
-      <div class="chip-v" style="color:var(--c2)">${f(totalE)}</div>
-      <div class="chip-l">Всього грн</div>
-    </div>
+// ─── INCOME ───────────────────────────────────────────────────────────────────
+function saveIncome() {
+  const val = parseFloat(document.getElementById('income-input').value);
+  if (!val || val <= 0) { showToast('Введіть суму доходу'); return; }
+
+  const dist = distribute(val);
+
+  // Save to goals
+  state.goals.forEach((g,i) => {
+    g.saved = (g.saved||0) + dist[i];
+  });
+
+  // Save day record
+  const today = new Date().toISOString().slice(0,10);
+  const existing = state.days.find(d => d.date === today);
+  if (existing) { existing.amount += val; }
+  else { state.days.push({ date: today, amount: val }); }
+
+  saveState();
+
+  // Show distribution
+  const normTotal = totalDailyNorm();
+  document.getElementById('dist-list').innerHTML = dist.map((d,i) => {
+    const g = state.goals[i];
+    const pct = normTotal > 0 ? Math.round(goalNorm(g)/normTotal*100*10)/10 : 0;
+    return `<div class="dist-row">
+      <span class="dist-name" style="color:${GOAL_COLORS[i]}">${esc(g.name)}</span>
+      <div style="text-align:right">
+        <span class="dist-amount" style="color:${GOAL_COLORS[i]}">+${fmt(d)} грн</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:6px">${pct}%</span>
+      </div>
+    </div>`;
+  }).join('') + `<div class="dist-row" style="padding-top:10px">
+    <span class="dist-name" style="font-weight:700;color:var(--text)">Разом</span>
+    <span class="dist-amount" style="color:var(--green)">+${fmt(val)} грн</span>
   </div>`;
+  document.getElementById('dist-preview').style.display = 'block';
 
-  return todayCard + normRow + `<div class="section-lbl">Прогрес по цілях</div>` + `<div class="goals-grid">${goalCards}</div>` + chips;
+  document.getElementById('income-input').value = '';
+  showToast('✅ Збережено!');
+  renderHome();
 }
 
-// ── Швидке збереження сьогодні ──
-function saveTodayFast() {
-  const earned = parseFloat(document.getElementById('today-input').value) || 0;
-  const expense = parseFloat(document.getElementById('today-expense').value) || 0;
-  const note = (document.getElementById('today-note').value || '').trim();
-  const date = todayStr();
-  const idx = S.days.findIndex(d => d.date === date);
-  const rec = { date, earned, expense, note };
-  if (idx >= 0) S.days[idx] = rec; else S.days.push(rec);
-  save(); render();
-  toast(`Збережено: ${f(earned)} грн`, 'ok');
-}
-function updateTodayPreview() { /* live update can be added */ }
+// ─── ANALYTICS ────────────────────────────────────────────────────────────────
+function renderAnalytics() {
+  // Stats
+  const ts = totalSaved(), tt = totalTarget();
+  const days = state.days.length;
+  const avg = avgIncome();
+  document.getElementById('analytics-stats').innerHTML = `
+    <div class="stat-cell">
+      <div class="stat-val">${fmt(ts)}</div>
+      <div class="stat-label">грн накопичено</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val">${days}</div>
+      <div class="stat-label">днів активних</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" style="color:var(--blue)">${fmt(avg)}</div>
+      <div class="stat-label">грн середнє/день</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-val" style="color:var(--purple)">${fmt(totalDailyNorm())}</div>
+      <div class="stat-label">грн норма/день</div>
+    </div>
+  `;
 
-// ══ TAB 1: ДНІ ══
+  // Income chart
+  drawIncomeChart();
+  // Goals chart
+  drawGoalsChart();
+  // Forecast
+  renderForecast();
+}
+
+function drawIncomeChart() {
+  const canvas = document.getElementById('income-chart');
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.offsetWidth || 320;
+  canvas.height = 150;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const days = [...state.days].sort((a,b)=>a.date.localeCompare(b.date)).slice(-14);
+  if (!days.length) {
+    ctx.fillStyle = '#6b7090';
+    ctx.font = '13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Ще немає даних', canvas.width/2, 75);
+    return;
+  }
+
+  const norm = totalDailyNorm();
+  const vals = days.map(d=>d.amount);
+  const maxV = Math.max(...vals, norm) * 1.15;
+  const W = canvas.width, H = canvas.height;
+  const padL=8, padR=8, padT=10, padB=24;
+  const cw = W-padL-padR, ch = H-padT-padB;
+  const step = days.length > 1 ? cw/(days.length-1) : cw;
+
+  // Grid lines
+  ctx.strokeStyle = '#2a2d3e';
+  ctx.lineWidth = 1;
+  [0.25,0.5,0.75,1].forEach(f => {
+    const y = padT + ch*(1-f);
+    ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(W-padR,y); ctx.stroke();
+  });
+
+  // Plan line (dashed)
+  if (norm > 0) {
+    const py = padT + ch*(1 - norm/maxV);
+    ctx.strokeStyle = '#6b7090';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5,4]);
+    ctx.beginPath(); ctx.moveTo(padL,py); ctx.lineTo(W-padR,py); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Area fill
+  const pts = days.map((d,i)=>({ x: padL+i*step, y: padT+ch*(1-d.amount/maxV) }));
+  ctx.fillStyle = '#4ade8018';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, padT+ch);
+  pts.forEach(p=>ctx.lineTo(p.x,p.y));
+  ctx.lineTo(pts[pts.length-1].x, padT+ch);
+  ctx.closePath(); ctx.fill();
+
+  // Line
+  ctx.strokeStyle = '#4ade80';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  pts.forEach((p,i)=>i===0?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y));
+  ctx.stroke();
+
+  // Dots
+  pts.forEach(p=>{
+    ctx.fillStyle='#4ade80';
+    ctx.beginPath(); ctx.arc(p.x,p.y,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0e0f13';
+    ctx.beginPath(); ctx.arc(p.x,p.y,2,0,Math.PI*2); ctx.fill();
+  });
+
+  // Labels
+  ctx.fillStyle='#6b7090'; ctx.font='10px sans-serif'; ctx.textAlign='center';
+  days.forEach((d,i)=>{
+    if(i%2===0 || days.length<=7) {
+      const label = d.date.slice(5);
+      ctx.fillText(label, padL+i*step, H-4);
+    }
+  });
+}
+
+function drawGoalsChart() {
+  const canvas = document.getElementById('goals-chart');
+  const wrap = canvas.parentElement;
+  canvas.width = wrap.offsetWidth || 320;
+  canvas.height = 150;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  const W=canvas.width, H=canvas.height;
+  const padL=8, padR=8, padT=10, padB=10;
+  const cw=W-padL-padR, ch=H-padT-padB;
+  const bw = Math.floor(cw/state.goals.length) - 8;
+  const gap = (cw - bw*state.goals.length)/(state.goals.length+1);
+
+  state.goals.forEach((g,i)=>{
+    const pct = g.target > 0 ? Math.min(1,(g.saved||0)/g.target) : 0;
+    const x = padL + gap*(i+1) + bw*i;
+    const fullH = ch;
+    const fillH = fullH * pct;
+    const y = padT+fullH-fillH;
+
+    // BG bar
+    ctx.fillStyle = '#1f2130';
+    ctx.beginPath();
+    roundRect(ctx, x, padT, bw, fullH, 6);
+    ctx.fill();
+
+    // Fill bar
+    ctx.fillStyle = GOAL_COLORS[i];
+    if(fillH > 0) {
+      ctx.beginPath();
+      roundRect(ctx, x, y, bw, fillH, 6);
+      ctx.fill();
+    }
+
+    // Label
+    ctx.fillStyle='#e8eaf0'; ctx.font='bold 11px sans-serif'; ctx.textAlign='center';
+    ctx.fillText(Math.round(pct*100)+'%', x+bw/2, padT+fullH-8);
+
+    ctx.fillStyle='#6b7090'; ctx.font='10px sans-serif';
+    const name = g.name.length>7 ? g.name.slice(0,7)+'…' : g.name;
+    ctx.fillText(name, x+bw/2, H-2);
+  });
+}
+
+function roundRect(ctx,x,y,w,h,r) {
+  if(h<r*2)r=h/2;
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+function renderForecast() {
+  const avg = avgIncome();
+  const norm = totalDailyNorm();
+  const el = document.getElementById('forecast-list');
+
+  if (!state.days.length) {
+    el.innerHTML = '<div class="card card-sm" style="color:var(--muted);font-size:13px">Ще не достатньо даних для прогнозу. Внесіть хоча б один день.</div>';
+    return;
+  }
+
+  const rate = avg > 0 ? avg : norm;
+  const distRatios = state.goals.map(g => goalNorm(g) / norm);
+
+  el.innerHTML = state.goals.map((g,i)=>{
+    const left = Math.max(0, g.target-(g.saved||0));
+    const daily = rate * distRatios[i];
+    const daysLeft = daily > 0 ? Math.ceil(left/daily) : null;
+    const dLabel = daysLeft === null ? '—' : daysLeft === 0 ? 'Виконано! 🎉' : `через ${daysLeft} ${dayWord(daysLeft)}`;
+    const done = left <= 0;
+    return `<div class="forecast-item">
+      <div class="forecast-dot" style="background:${GOAL_COLORS[i]}"></div>
+      <div class="forecast-text">
+        <strong style="color:${GOAL_COLORS[i]}">${esc(g.name)}</strong>
+        <span style="color:var(--muted);font-size:12px;margin-left:6px">${fmt(left)} грн залишилось</span>
+      </div>
+      <div class="forecast-days ${done?'badge badge-green':''}">${dLabel}</div>
+    </div>`;
+  }).join('');
+}
+
+function dayWord(n) {
+  if(n===1) return 'день';
+  if(n>=2&&n<=4) return 'дні';
+  return 'днів';
+}
+
+// ─── DAYS ─────────────────────────────────────────────────────────────────────
 function renderDays() {
-  if (!S.cfg.startDate) {
-    return `<div class="empty"><div class="empty-ico">📅</div><div class="empty-txt">Спочатку налаштуй<br>дату початку в ⚙️ Нал.</div></div>`;
+  const norm = totalDailyNorm();
+  const today = new Date().toISOString().slice(0,10);
+
+  // Parse start date
+  const start = new Date(state.startDate);
+  const now = new Date();
+  const totalDays = Math.max(state.goals.reduce((m,g)=>Math.max(m,g.days),0), state.days.length, 14);
+
+  // Build day map
+  const dayMap = {};
+  state.days.forEach(d => { dayMap[d.date] = d.amount; });
+
+  // Build array of days from start
+  const allDays = [];
+  for(let i=0; i<totalDays; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate()+i);
+    const ds = d.toISOString().slice(0,10);
+    allDays.push(ds);
   }
-  const allDates = buildDaysList();
-  const tdStr = todayStr();
-  const totalE = totalEarned();
-  const uahGoals = goalsUAH();
 
-  // equity curve
-  let cumul = 0;
-  const pts = [];
-  const W = 340, H = 90;
-  const maxV = Math.max(...uahGoals, totalE, 1);
-  allDates.forEach((d, i) => {
-    const day = getDay(d);
-    if (day) cumul += (day.earned || 0);
-    const x = (i / (allDates.length - 1 || 1)) * W;
-    const y = H - (cumul / maxV) * H;
-    pts.push(`${x.toFixed(1)},${y.toFixed(1)}`);
-  });
-
-  const goalLines = uahGoals.map((g, i) => {
-    const gy = H - (g / maxV) * H;
-    return `<line x1="0" y1="${gy.toFixed(1)}" x2="${W}" y2="${gy.toFixed(1)}" stroke="${GC[i].color}" stroke-width="1" stroke-dasharray="4,4" opacity=".5"/>
-    <text x="3" y="${(gy - 3).toFixed(1)}" fill="${GC[i].color}" font-size="8" font-family="JetBrains Mono,monospace" font-weight="700">Ц${i+1}</text>`;
+  // Grid
+  const grid = document.getElementById('days-grid');
+  grid.innerHTML = allDays.map((ds,i) => {
+    const amt = dayMap[ds];
+    const isPast = ds < today;
+    const isToday = ds === today;
+    let cls, emoji;
+    if(amt !== undefined) {
+      if(amt >= norm*0.9) { cls='day-done'; emoji='🟢'; }
+      else if(amt > 0) { cls='day-partial'; emoji='🟡'; }
+      else { cls='day-miss'; emoji='🔴'; }
+    } else if(isPast) {
+      cls='day-miss'; emoji='🔴';
+    } else {
+      cls='day-future'; emoji='';
+    }
+    return `<div class="day-cell ${cls}${isToday?' day-today':''}" title="${ds}">
+      <div class="day-num">${i+1}</div>
+      <div style="font-size:10px">${emoji}</div>
+    </div>`;
   }).join('');
 
-  const chart = `<div class="stat-card" style="margin-bottom:13px">
-    <div class="stat-head"><div class="stat-title">Крива накопичення</div></div>
-    <div style="padding:12px 16px 10px">
-      <svg viewBox="0 0 ${W} ${H}" width="100%" height="${H}">
-        <defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#4ade80" stop-opacity=".15"/><stop offset="100%" stop-color="#4ade80" stop-opacity="0"/></linearGradient></defs>
-        ${goalLines}
-        <polyline points="0,${H} ${pts.join(' ')} ${W},${H}" fill="url(#eg)" stroke="none"/>
-        <polyline points="${pts.join(' ')}" fill="none" stroke="var(--c1)" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
-      </svg>
-    </div>
-  </div>`;
-
-  let daysList = '';
-  allDates.forEach((date, i) => {
-    const day = getDay(date);
-    const isTd = date === tdStr;
-    const isFuture = date > tdStr;
-    const earned = day ? (day.earned || 0) : 0;
-    const expense = day ? (day.expense || 0) : 0;
-    const net = earned - expense;
-
-    const earnColor = earned > 0 ? 'var(--c1)' : 'var(--txt3)';
-    const numCls = isTd ? 'day-num today-n' : 'day-num';
-
-    let sub = '';
-    if (isFuture) sub = '';
-    else if (!day || earned === 0) sub = `<span style="color:var(--c3);font-size:11px">не внесено</span>`;
-    else {
-      if (day.note) sub = `<span>${day.note}</span>`;
-      if (expense > 0) sub += `<span style="color:#e8284a"> · -${f(expense)} витрати</span>`;
-    }
-
-    let right = '';
-    if (earned > 0) {
-      right = `<div class="day-earned" style="color:${earnColor}">${f(earned)} грн</div>`;
-      if (expense > 0) right += `<div class="day-note">чист: ${f(net)} грн</div>`;
-    } else if (!isFuture) {
-      right = `<div class="day-earned" style="color:var(--txt3)">—</div>`;
-    }
-
-    daysList += `<div class="day-item${earned > 0 ? ' has-data' : ''}${isTd ? ' today' : ''}${isFuture ? ' future' : ''}" onclick="openDay('${date}')">
-      <div class="${numCls}">${i+1}</div>
-      <div class="day-body">
-        <div class="day-date">${fmtDate(date)}${isTd ? ' · Сьогодні' : ''}</div>
-        <div class="day-sub">${sub}</div>
+  // List (last 7 or so)
+  const list = document.getElementById('days-list');
+  const recent = [...state.days].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,10);
+  if(!recent.length) {
+    list.innerHTML = '<div class="card card-sm" style="color:var(--muted);font-size:13px">Записів ще немає.</div>';
+    return;
+  }
+  list.innerHTML = recent.map(d=>{
+    const amt = d.amount;
+    let badge, cls;
+    if(amt>=norm*0.9){badge='✅ Норма';cls='badge-green';}
+    else if(amt>0){badge='⚡ Частково';cls='badge-yellow';}
+    else{badge='❌ Пропуск';cls='badge-red';}
+    const dist = distribute(amt);
+    return `<div class="card card-sm" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span style="font-size:13px;color:var(--muted)">${d.date}</span>
+        <span class="badge ${cls}">${badge}</span>
       </div>
-      <div class="day-right">${right}</div>
+      <div style="font-size:18px;font-weight:700;margin:4px 0">${fmt(amt)} грн</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+        ${state.goals.map((g,i)=>`<span style="font-size:11px;color:${GOAL_COLORS[i]}">${esc(g.name)}: +${fmt(dist[i])}</span>`).join('')}
+      </div>
     </div>`;
-  });
-
-  return chart + `<div class="section-lbl" style="margin-bottom:9px">Всі дні</div>` + daysList;
+  }).join('');
 }
 
-// ══ TAB 2: НАЛАШТУВАННЯ ══
+// ─── SETTINGS ─────────────────────────────────────────────────────────────────
 function renderSettings() {
-  const { startDate, totalDays, rate, goals } = S.cfg;
-  const uahGoals = goalsUAH();
+  const el = document.getElementById('settings-goals');
+  el.innerHTML = state.goals.map((g,i)=>{
+    const norm = goalNorm(g);
+    return `<div class="setting-goal">
+      <div class="setting-goal-header">
+        <div class="setting-dot" style="background:${GOAL_COLORS[i]}"></div>
+        <span>Ціль ${i+1}</span>
+      </div>
+      <div class="input-row">
+        <div class="input-group input-full">
+          <label>Назва</label>
+          <input type="text" id="g${i}-name" value="${esc(g.name)}" placeholder="Назва мети">
+        </div>
+        <div class="input-group">
+          <label>Сума (грн)</label>
+          <input type="number" id="g${i}-target" value="${g.target}" min="0" oninput="updateNorm(${i})">
+        </div>
+        <div class="input-group">
+          <label>Кількість днів</label>
+          <input type="number" id="g${i}-days" value="${g.days}" min="1" oninput="updateNorm(${i})">
+        </div>
+      </div>
+      <div class="norm-badge" id="g${i}-norm">Норма: <strong>${fmt(norm)} грн/день</strong></div>
+    </div>`;
+  }).join('');
+}
 
-  return `
-  <div class="sett-section">
-    <span class="sett-label">Дата початку</span>
-    <input class="sett-input" id="s-startdate" type="date" value="${startDate || ''}">
-  </div>
-  <div class="sett-section">
-    <span class="sett-label">Кількість днів</span>
-    <input class="sett-input" id="s-days" type="number" inputmode="numeric" value="${totalDays || 153}">
-  </div>
-  <div class="sett-section">
-    <span class="sett-label">Курс USD → UAH</span>
-    <input class="sett-input" id="s-rate" type="number" inputmode="decimal" step="0.01" value="${rate || 46.60}">
-  </div>
-  <div class="sett-section">
-    <span class="sett-label">Цілі в $ (4 рівні)</span>
-    <div class="sett-goals">
-      ${goals.map((g, i) => `
-        <div class="goal-inp-wrap">
-          <div class="goal-inp-label" style="color:${GC[i].color}">${GOAL_LABELS[i]}</div>
-          <input class="goal-inp" id="s-goal-${i}" type="number" inputmode="decimal" step="0.01" value="${g}" style="border-color:${GC[i].color}30">
-        </div>
-      `).join('')}
-    </div>
-    <div style="margin-top:10px;background:var(--bg3);border:1px solid var(--brd);border-radius:12px;padding:12px 13px">
-      ${uahGoals.map((g, i) => `
-        <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:${i<3?'1px solid rgba(255,255,255,.04)':'none'}">
-          <span style="font-size:12px;color:${GC[i].color};font-family:'JetBrains Mono',monospace;font-weight:700">${GOAL_LABELS[i]}</span>
-          <span style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--txt2)">$${f(goals[i],2)} = ${f(g)} грн · ${f(g/totalDays,1)} грн/день</span>
-        </div>
-      `).join('')}
-    </div>
-  </div>
-  <button class="save-sett-btn" onclick="saveSettings()">✅ Зберегти налаштування</button>
-  <button class="danger-btn" onclick="openReset()">🗑 Скинути всі дані</button>`;
+function updateNorm(i) {
+  const target = parseFloat(document.getElementById(`g${i}-target`).value)||0;
+  const days = parseFloat(document.getElementById(`g${i}-days`).value)||1;
+  const norm = days > 0 ? target/days : 0;
+  document.getElementById(`g${i}-norm`).innerHTML = `Норма: <strong>${fmt(norm)} грн/день</strong>`;
 }
 
 function saveSettings() {
-  const startDate = document.getElementById('s-startdate').value;
-  const totalDays = parseInt(document.getElementById('s-days').value) || 153;
-  const rate = parseFloat(document.getElementById('s-rate').value) || 46.60;
-  const goals = [0,1,2,3].map(i => parseFloat(document.getElementById(`s-goal-${i}`).value) || 0);
-  S.cfg = { ...S.cfg, startDate, totalDays, rate, goals };
-  save(); render();
-  toast('Налаштування збережено ✓', 'ok');
+  state.goals.forEach((g,i)=>{
+    g.name = document.getElementById(`g${i}-name`).value || `Ціль ${i+1}`;
+    g.target = parseFloat(document.getElementById(`g${i}-target`).value)||g.target;
+    g.days = parseInt(document.getElementById(`g${i}-days`).value)||g.days;
+  });
+  saveState();
+  showToast('✅ Налаштування збережено');
+  renderHome();
 }
 
-// ── DAY MODAL ──
-function openDay(date) {
-  _openDate = date;
-  const day = getDay(date);
-  document.getElementById('dm-title').textContent = fmtDate(date) + (date === todayStr() ? ' · Сьогодні' : '');
-  document.getElementById('dm-sub').textContent = `Активна ціль: ${GOAL_LABELS[activeGoalIdx()]}`;
-  document.getElementById('dm-earned').value = day ? (day.earned || '') : '';
-  document.getElementById('dm-expense').value = day ? (day.expense || '') : '';
-  document.getElementById('dm-note').value = day ? (day.note || '') : '';
-  document.getElementById('dm-del-btn').style.display = day ? 'block' : 'none';
-  document.getElementById('ov-day').classList.add('open');
-}
-function saveDay() {
-  const date = _openDate; if (!date) return;
-  const earned = parseFloat(document.getElementById('dm-earned').value) || 0;
-  const expense = parseFloat(document.getElementById('dm-expense').value) || 0;
-  const note = document.getElementById('dm-note').value.trim();
-  const idx = S.days.findIndex(d => d.date === date);
-  const rec = { date, earned, expense, note };
-  if (idx >= 0) S.days[idx] = rec; else S.days.push(rec);
-  save(); render(); closeOv('ov-day');
-  toast(`Збережено: ${f(earned)} грн`, 'ok');
-}
-function clearDay() {
-  const date = _openDate; if (!date) return;
-  S.days = S.days.filter(d => d.date !== date);
-  save(); render(); closeOv('ov-day');
-  toast('День очищено', 'inf');
+function resetAll() {
+  if(!confirm('Скинути всі дані? Це незворотньо.')) return;
+  localStorage.removeItem('dd_v4');
+  state = loadState();
+  renderHome();
+  showToast('🗑 Дані скинуто');
 }
 
-// ── RESET ──
-function openReset() { document.getElementById('ov-reset').classList.add('open'); }
-function doReset() {
-  S = clone(DEF); save(); render(); closeOv('ov-reset');
-  toast('Дані скинуто', 'inf');
+// ─── UTILS ────────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return Math.round(n*10)/10;
 }
-
-// ── OVERLAY / TOAST ──
-function closeOv(id) { document.getElementById(id).classList.remove('open'); }
-function ovClick(e, id) { if (e.target === document.getElementById(id)) closeOv(id); }
-let _tt;
-function toast(msg, type = 'ok') {
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showToast(msg) {
   const t = document.getElementById('toast');
-  t.textContent = msg; t.className = `toast ${type} show`;
-  clearTimeout(_tt); _tt = setTimeout(() => { t.className = `toast ${type}`; }, 2400);
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2500);
 }
 
-// ── INIT ──
-function init() {
-  load(); buildNav(); render();
-  toast('🔄 Підключення до хмари...', 'inf');
-}
-document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', init) : init();
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+window.addEventListener('resize', ()=>{
+  const ap = document.getElementById('page-analytics');
+  if(ap.classList.contains('active')) renderAnalytics();
+});
+
+renderHome();
 </script>
 </body>
 </html>
